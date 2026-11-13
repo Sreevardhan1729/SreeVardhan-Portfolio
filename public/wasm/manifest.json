@@ -31,43 +31,46 @@
       {
         "input": "PING",
         "output": [
-          "+PONG"
+          "PONG"
         ]
       },
       {
         "input": "SET visitor \"hello\" EX 30",
         "output": [
-          "+OK"
+          "OK"
         ]
       },
       {
         "input": "TTL visitor",
         "output": [
-          ":30"
+          "(integer) 30"
         ]
       },
       {
         "input": "LPUSH queue a b c",
         "output": [
-          ":3"
+          "(integer) 3"
         ]
       },
       {
         "input": "LRANGE queue 0 -1",
         "output": [
-          "*3\r\n$1\r\nc\r\n$1\r\nb\r\n$1\r\na"
+          "1) \"c\"",
+          "2) \"b\"",
+          "3) \"a\""
         ]
       },
       {
         "input": "HSET user name Sree",
         "output": [
-          ":1"
+          "(integer) 1"
         ]
       },
       {
         "input": "HGETALL user",
         "output": [
-          "*2\r\n$4\r\nname\r\n$4\r\nSree"
+          "1) \"name\"",
+          "2) \"Sree\""
         ]
       }
     ]

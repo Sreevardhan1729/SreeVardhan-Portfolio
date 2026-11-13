@@ -85,3 +85,14 @@ describe("ForgeDB compiled to WebAssembly", () => {
     expect(db.exec("*0\r\n")).toBe("-ERR Protocol error\r\n")
   })
 })
+
+describe("ForgeSession against the real module", () => {
+  it("round-trips unicode values through real ForgeDB", async () => {
+    const { loadForgeModule } = await import("@/lib/forgedb/loader")
+    const { ForgeSession } = await import("@/lib/forgedb/session")
+    const session = new ForgeSession(() => loadForgeModule(pathToFileURL(modulePath).href), [])
+    expect(await session.run('SET k "héllo 👋"')).toEqual({ lines: ["OK"] })
+    expect(await session.run("GET k")).toEqual({ lines: ['"héllo 👋"'] })
+    session.dispose()
+  })
+})

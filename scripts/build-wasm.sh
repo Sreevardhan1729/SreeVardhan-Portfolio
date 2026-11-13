@@ -45,7 +45,7 @@ build_forgedb() {
     "console.log(JSON.stringify(require('fs').readFileSync(0,'utf8').trim().split('\n')))")
   FORGEDB_SHA=$(source_field forgedb sha) FORGEDB_COMMANDS=$commands \
     FORGEDB_BROTLI=$(brotli_bytes "$out_dir/forgedb.wasm") \
-    node scripts/record-session.mjs
+    pnpm exec tsx scripts/record-session.mts
 }
 
 case "$target" in
