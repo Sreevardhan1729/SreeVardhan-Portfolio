@@ -1,0 +1,10 @@
+{
+  "forgedb": {
+    "repo": "https://github.com/Sreevardhan1729/ForgeDB",
+    "sha": "028a40c9828ba0e38f9c30d644722417a1237394"
+  },
+  "gateway": {
+    "repo": "https://github.com/Sreevardhan1729/ai-inference-gateway",
+    "sha": "3ad67c982c54728131d9acb9e13dfb74759d27f2"
+  }
+}

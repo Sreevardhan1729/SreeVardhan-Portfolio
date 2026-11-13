@@ -1,0 +1,75 @@
+{
+  "forgedb": {
+    "sha": "028a40c9828ba0e38f9c30d644722417a1237394",
+    "commands": [
+      "PING",
+      "GET",
+      "SET",
+      "DEL",
+      "TTL",
+      "EXPIRE",
+      "LPUSH",
+      "RPUSH",
+      "LPOP",
+      "RPOP",
+      "LRANGE",
+      "HSET",
+      "HGET",
+      "HDEL",
+      "HGETALL",
+      "SADD",
+      "SMEMBERS",
+      "SISMEMBER",
+      "SREM",
+      "SINTER",
+      "PUBLISH",
+      "SUBSCRIBE",
+      "UNSUBSCRIBE"
+    ],
+    "brotliBytes": 17940,
+    "session": [
+      {
+        "input": "PING",
+        "output": [
+          "+PONG"
+        ]
+      },
+      {
+        "input": "SET visitor \"hello\" EX 30",
+        "output": [
+          "+OK"
+        ]
+      },
+      {
+        "input": "TTL visitor",
+        "output": [
+          ":30"
+        ]
+      },
+      {
+        "input": "LPUSH queue a b c",
+        "output": [
+          ":3"
+        ]
+      },
+      {
+        "input": "LRANGE queue 0 -1",
+        "output": [
+          "*3\r\n$1\r\nc\r\n$1\r\nb\r\n$1\r\na"
+        ]
+      },
+      {
+        "input": "HSET user name Sree",
+        "output": [
+          ":1"
+        ]
+      },
+      {
+        "input": "HGETALL user",
+        "output": [
+          "*2\r\n$4\r\nname\r\n$4\r\nSree"
+        ]
+      }
+    ]
+  }
+}
