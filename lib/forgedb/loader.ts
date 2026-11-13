@@ -18,7 +18,8 @@ type RawModule = {
 // The module is served from public/ and loaded at runtime, so the bundler must leave the import alone.
 export async function loadForgeModule(url = "/wasm/forgedb.mjs"): Promise<ForgeModule> {
   const { default: factory } = await import(/* webpackIgnore: true */ /* turbopackIgnore: true */ url)
-  const m: RawModule = await factory()
+  // Emscripten reports load failures through printErr; the session already turns them into a status.
+  const m: RawModule = await factory({ printErr: (text: string) => console.warn(text) })
   return {
     exec(request) {
       const ptr = m._malloc(request.length)
