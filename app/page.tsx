@@ -1,3 +1,4 @@
+import { TraceWaterfall } from "@/components/experience/trace-waterfall"
 import { AofPanel } from "@/components/forgedb/aof-panel"
 import { ForgeTerminal } from "@/components/forgedb/terminal"
 import { GatewaySimulation } from "@/components/gateway/simulation"
@@ -14,6 +15,7 @@ export default function Home() {
         <ForgeTerminal />
         <AofPanel />
         <GatewaySimulation />
+        <TraceWaterfall experience={portfolioData.experience[0]} />
       </div>
     </main>
   )

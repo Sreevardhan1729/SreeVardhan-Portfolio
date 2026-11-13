@@ -6,6 +6,9 @@ export type ExternalLink = {
   href: string
 }
 
+// Dates are YYYY-MM or YYYY-MM-DD. DevRev periods come from the dates of the merged PRs behind each highlight.
+export type Period = { start: string; end: string }
+
 export type Experience = {
   role: string
   company: string
@@ -13,9 +16,10 @@ export type Experience = {
   location: string
   start: string
   end: string
+  period?: Period
   summary?: string
   stats?: { value: string; label: string }[]
-  highlights: { title?: string; text: string }[]
+  highlights: { title?: string; text: string; period?: Period }[]
   tags: string[]
 }
 
@@ -95,6 +99,7 @@ export const portfolioData = {
       location: "Chennai",
       start: "Jan 2026",
       end: "Nov 2026",
+      period: { start: "2026-01", end: "2026-11" },
       summary: "Full-stack work on DevRev's dashboards and the data platform behind them.",
       stats: [
         { value: "168", label: "merged PRs" },
@@ -103,28 +108,39 @@ export const portfolioData = {
       ],
       highlights: [
         {
+          title: "TypeScript strict mode.",
+          text: "Moved shared and feature libraries of DevRev's web app to strict TypeScript across 23 PRs, fixing errors with real type narrowing instead of assertions, and removed about 1,700 lines of dead code.",
+          period: { start: "2026-02-24", end: "2026-04-10" },
+        },
+        {
           title: "Real-time export progress.",
           text: "Shipped live progress for SQL data exports across 6 repositories: a new server-streaming gRPC API, progress events relayed through Temporal, and a progress bar in the desktop app.",
+          period: { start: "2026-10-27", end: "2026-11-12" },
         },
         {
           title: "Data freshness.",
           text: "Built per-table data freshness in Go for the analytics query engine, tracking per-partition Kafka offsets and caught-up state so dashboards show when data was last refreshed.",
+          period: { start: "2026-10", end: "2026-11" },
         },
         {
           title: "Multi-tab dashboards.",
           text: "Shipped multi-tab dashboards in React across 20 PRs (add, rename, delete, drag-to-reorder and per-tab URL filters) and rolled them out in 5 feature-flag stages, from dev to production GA.",
+          period: { start: "2026-09", end: "2026-11" },
         },
         {
           title: "Multi-hop joins.",
           text: "Built multi-hop relationship joins for dashboard widgets, unifying foreign-key and custom-link joins into one hop-based contract, with the SQL generation contributed to open-source Meerkat.",
+          period: { start: "2026-05", end: "2026-09" },
         },
         {
           title: "Build-time tracing.",
           text: "Built dev-instrument, an rspack loader that uses the TypeScript compiler API to trace exported functions into per-operation call trees, compiled out of production builds. A companion Claude Code skill reads the traces and found the root cause of a crash that code review had missed.",
+          period: { start: "2026-05-22", end: "2026-06-11" },
         },
         {
           title: "Test reliability.",
           text: "Traced 44 always-failing Playwright tests to the content security policy blocking mocked fetches. After the fix, hosted-QA failures fell from 46 to 8, none of them related.",
+          period: { start: "2026-09-25", end: "2026-11-11" },
         },
       ],
       tags: ["TypeScript", "React", "Go", "Python", "Kafka", "gRPC", "Temporal", "DuckDB", "Playwright"],
