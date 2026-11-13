@@ -1,22 +1,29 @@
-import { TraceWaterfall } from "@/components/experience/trace-waterfall"
-import { AofPanel } from "@/components/forgedb/aof-panel"
-import { ForgeTerminal } from "@/components/forgedb/terminal"
-import { GatewaySimulation } from "@/components/gateway/simulation"
-import { portfolioData } from "@/lib/portfolio-data"
+import { About } from "@/components/site/about"
+import { Achievements } from "@/components/site/achievements"
+import { Contact } from "@/components/site/contact"
+import { Experience } from "@/components/site/experience"
+import { Footer } from "@/components/site/footer"
+import { Hero } from "@/components/site/hero"
+import { Projects } from "@/components/site/projects"
+import { Skills } from "@/components/site/skills"
+import { TopBar } from "@/components/site/top-bar"
 
 export default function Home() {
-  const { personal } = portfolioData
   return (
-    <main id="content" className="mx-auto max-w-6xl px-4 py-16 sm:px-8">
-      <h1 className="text-4xl font-semibold tracking-tight">{personal.name}</h1>
-      <p className="mt-3 text-muted">{personal.headline}</p>
-      {/* Temporary mounts until the page is assembled. */}
-      <div className="mt-10 grid gap-6">
-        <ForgeTerminal />
-        <AofPanel />
-        <GatewaySimulation />
-        <TraceWaterfall experience={portfolioData.experience[0]} />
+    <>
+      <TopBar />
+      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+        <main id="content">
+          <Hero />
+          <About />
+          <Experience />
+          <Projects />
+          <Skills />
+          <Achievements />
+          <Contact />
+        </main>
+        <Footer />
       </div>
-    </main>
+    </>
   )
 }

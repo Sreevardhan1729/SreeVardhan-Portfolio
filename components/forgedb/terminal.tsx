@@ -71,7 +71,12 @@ export function ForgeTerminal() {
             source: "note",
             output: [
               `Connected to ForgeDB@${manifest.forgedb.sha.slice(0, 7)}, running in this tab.`,
-              "Data lives in memory and resets on reload. Type HELP for commands.",
+              "Data lives in memory and resets on reload.",
+              "",
+              "Try these, or tap the chips below:",
+              '  SET visitor "hello" EX 30   then  TTL visitor',
+              "  LPUSH queue a b c           then  LRANGE queue 0 -1",
+              "  HELP                        lists every command",
             ],
           },
           ...current.filter((entry) => entry.source === "live"),
@@ -160,7 +165,7 @@ export function ForgeTerminal() {
             )}
             {entry.output?.map((line, index) => (
               <div key={index} className={isError(line) ? "text-err" : entry.source === "note" ? "text-muted" : undefined}>
-                {line}
+                {line || "\u00a0"}
               </div>
             ))}
           </div>

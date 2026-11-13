@@ -114,3 +114,33 @@ body {
 .control:disabled {
   opacity: 0.5;
 }
+
+html {
+  scroll-padding-top: 4rem;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Scroll-driven reveal: content eases in as it enters the viewport. Opacity and transform only. */
+  @supports (animation-timeline: view()) {
+    .reveal {
+      animation: reveal 1ms linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 35%;
+    }
+  }
+}
+
+@keyframes reveal {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
