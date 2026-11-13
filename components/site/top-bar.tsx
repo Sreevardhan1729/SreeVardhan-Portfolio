@@ -1,3 +1,4 @@
+import { CommandMenu } from "@/components/command-menu"
 import { ThemeToggle } from "./theme-toggle"
 
 export const NAV = [
@@ -28,7 +29,8 @@ export function TopBar() {
             ))}
           </ul>
         </nav>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1.5">
+          <CommandMenu />
           <ThemeToggle />
         </div>
       </div>
