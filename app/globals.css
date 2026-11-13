@@ -1,0 +1,99 @@
+@import "tailwindcss";
+
+/* Theme tokens. Light is the base; dark applies from the system setting (also without JS)
+   or from the toggle via the .dark class that next-themes sets. Use tokens, not dark: variants. */
+:root {
+  --background: #f6f5f1;
+  --surface: #ffffff;
+  --surface-2: #eeece6;
+  --foreground: #171714;
+  --muted: #5c5b54;
+  --rule: #dad7ce;
+  --accent: #985a00;
+  --accent-foreground: #ffffff;
+  --ok: #1f7a45;
+  --err: #b42318;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) {
+    --background: #0b0c0a;
+    --surface: #121410;
+    --surface-2: #1a1c17;
+    --foreground: #e9e7e1;
+    --muted: #9d9b93;
+    --rule: #272923;
+    --accent: #ffb02e;
+    --accent-foreground: #1a1204;
+    --ok: #5fd08a;
+    --err: #ff7466;
+    color-scheme: dark;
+  }
+}
+
+:root.dark {
+  --background: #0b0c0a;
+  --surface: #121410;
+  --surface-2: #1a1c17;
+  --foreground: #e9e7e1;
+  --muted: #9d9b93;
+  --rule: #272923;
+  --accent: #ffb02e;
+  --accent-foreground: #1a1204;
+  --ok: #5fd08a;
+  --err: #ff7466;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-rule: var(--rule);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-ok: var(--ok);
+  --color-err: var(--err);
+  --font-sans: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+html {
+  background: var(--background);
+  color: var(--foreground);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--background);
+  color: var(--foreground);
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.skip-link {
+  position: absolute;
+  left: 1rem;
+  top: -3rem;
+  z-index: 50;
+  padding: 0.5rem 0.75rem;
+  background: var(--accent);
+  color: var(--accent-foreground);
+  font-family: var(--font-mono);
+  font-size: 0.875rem;
+}
+.skip-link:focus {
+  top: 1rem;
+}
