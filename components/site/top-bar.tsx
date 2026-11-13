@@ -1,14 +1,6 @@
 import { CommandMenu } from "@/components/command-menu"
+import { NAV } from "@/lib/nav"
 import { ThemeToggle } from "./theme-toggle"
-
-export const NAV = [
-  { id: "about", label: "About" },
-  { id: "experience", label: "Experience" },
-  { id: "projects", label: "Projects" },
-  { id: "skills", label: "Skills" },
-  { id: "achievements", label: "Achievements" },
-  { id: "contact", label: "Contact" },
-] as const
 
 export function TopBar() {
   return (

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useEffectEvent, useRef, useState } from "react"
 import { GATEWAY_FAIL_EVENT, type GatewayFailDetail } from "@/lib/events"
 import { loadGatewaySim } from "@/lib/gateway/loader"
 import { rollingShare } from "@/lib/gateway/share"
@@ -72,12 +72,12 @@ function breakerText(name: BackendName, backend: BackendView): string {
 
 export function GatewaySimulation() {
   const rootRef = useRef<HTMLDivElement>(null)
-  const simRef = useRef<GatewaySim | null>(null)
   const startedRef = useRef(false)
   const pending = useRef<SimEvent[]>([])
   const recent = useRef<SimEvent[]>([])
   const lastStates = useRef<Record<BackendName, BreakerState>>({ A: "closed", B: "closed" })
   const [status, setStatus] = useState<Status>("idle")
+  const [sim, setSim] = useState<GatewaySim | null>(null)
   const [near, setNear] = useState(false)
   const [onScreen, setOnScreen] = useState(false)
   const [playing, setPlaying] = useState(true)
@@ -87,8 +87,7 @@ export function GatewaySimulation() {
   const [view, setView] = useState<View>(EMPTY_VIEW)
   const [announcement, setAnnouncement] = useState("")
   const reducedMotion = usePrefersReducedMotion()
-  const settings = useRef({ playing, rate, mix })
-  settings.current = { playing, rate, mix }
+  const currentSettings = useEffectEvent(() => ({ playing, rate, mix }))
 
   useEffect(() => {
     const root = rootRef.current!
@@ -109,21 +108,20 @@ export function GatewaySimulation() {
     setStatus("loading")
     windowLoaded()
       .then(loadGatewaySim)
-      .then((sim) => {
-        sim.start(CONFIG)
-        simRef.current = sim
+      .then((loaded) => {
+        loaded.start(CONFIG)
+        setSim(loaded)
         setStatus("ready")
       })
       .catch(() => setStatus("unavailable"))
   }, [near])
 
-  useEffect(() => () => simRef.current?.stop(), [])
+  useEffect(() => () => sim?.stop(), [sim])
 
   useEffect(() => {
-    const sim = simRef.current
-    if (status !== "ready" || !sim) return
+    if (!sim) return
     for (const backend of BACKENDS) sim.setHealthy(backend, !failing[backend])
-  }, [failing, status])
+  }, [failing, sim])
 
   useEffect(() => {
     const onFail = (event: Event) => {
@@ -139,8 +137,7 @@ export function GatewaySimulation() {
 
   // Traffic and readouts run only while the section is on screen and the tab is visible.
   useEffect(() => {
-    const sim = simRef.current
-    if (status !== "ready" || !sim || !onScreen) return
+    if (!sim || !onScreen) return
 
     const apply = (snapshot: SimSnapshot) => {
       pending.current.push(...snapshot.Events)
@@ -172,7 +169,7 @@ export function GatewaySimulation() {
     let last = performance.now()
     let lastSnapshot = 0
     const tick = (now: number) => {
-      const { playing, rate, mix } = settings.current
+      const { playing, rate, mix } = currentSettings()
       if (playing) for (const arrival of arrivalsFor(now - last, rate, mix, Math.random)) sim.submit(arrival.key, arrival.priority, arrival.cost)
       if (now - lastSnapshot >= SNAPSHOT_EVERY_MS) {
         lastSnapshot = now
@@ -183,9 +180,8 @@ export function GatewaySimulation() {
     }
     frame = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(frame)
-  }, [status, onScreen])
+  }, [sim, onScreen])
 
-  const sim = simRef.current
   const ready = status === "ready" && sim !== null
   const anyOpen = BACKENDS.some((backend) => view.backends[backend].state === "open")
   const states = { A: view.backends.A.state, B: view.backends.B.state }

@@ -1,6 +1,6 @@
 "use client"
 
-import { type FormEvent, type KeyboardEvent, useEffect, useRef, useState } from "react"
+import { type FormEvent, type KeyboardEvent, useEffect, useEffectEvent, useRef, useState } from "react"
 import chips from "@/lib/forgedb/chips.json"
 import type { ForgeStatus } from "@/lib/forgedb/session"
 import { getForgeSession } from "@/lib/forgedb/shared"
@@ -56,8 +56,10 @@ export function ForgeTerminal() {
       )
     })
   }
-  const runRef = useRef(run)
-  runRef.current = run
+  const runFromMenu = useEffectEvent((command: string) => {
+    rootRef.current?.scrollIntoView({ block: "center" })
+    run(command)
+  })
 
   // Load the module after the page has loaded and gone idle, unless the visitor reaches the terminal first.
   useEffect(() => {
@@ -93,9 +95,7 @@ export function ForgeTerminal() {
     else window.addEventListener("load", schedule, { once: true })
 
     const onRun = (event: Event) => {
-      const { command } = (event as CustomEvent<ForgeRunDetail>).detail
-      rootRef.current?.scrollIntoView({ block: "center" })
-      runRef.current(command)
+      runFromMenu((event as CustomEvent<ForgeRunDetail>).detail.command)
     }
     window.addEventListener(FORGEDB_RUN_EVENT, onRun)
     return () => {

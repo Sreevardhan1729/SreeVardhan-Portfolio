@@ -49,7 +49,6 @@ export function PipelineCanvas({ pending, states, animate }: Props) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const statesRef = useRef(states)
   const drawRef = useRef<(now: number) => void>(() => {})
-  statesRef.current = states
 
   useEffect(() => {
     const wrap = wrapRef.current!
@@ -177,8 +176,9 @@ export function PipelineCanvas({ pending, states, animate }: Props) {
     }
   }, [animate, pending])
 
-  // Without animation, redraw only when a breaker changes.
+  // Keep the latest breaker states for the draw loop; without animation, redraw only when they change.
   useEffect(() => {
+    statesRef.current = states
     if (!animate) drawRef.current(performance.now())
   }, [animate, states])
 

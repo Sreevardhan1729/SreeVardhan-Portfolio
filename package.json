@@ -11,7 +11,9 @@
     "e2e": "playwright test",
     "typecheck": "tsc --noEmit",
     "build:wasm": "bash scripts/build-wasm.sh",
-    "check:terms": "bash scripts/check-banned-terms.sh"
+    "check:terms": "bash scripts/check-banned-terms.sh",
+    "check:budgets": "node scripts/check-budgets.mjs",
+    "check:lighthouse": "node scripts/check-lighthouse.mjs"
   },
   "dependencies": {
     "cmdk": "^1.1.1",
@@ -29,6 +31,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.4.6",
+    "lighthouse": "^13.6.0",
     "tailwindcss": "4.3.3",
     "tsx": "^4.23.15",
     "typescript": "^5",
