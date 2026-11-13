@@ -74,5 +74,10 @@
         ]
       }
     ]
+  },
+  "gateway": {
+    "sha": "3ad67c982c54728131d9acb9e13dfb74759d27f2",
+    "toolchain": "tinygo 0.44.0",
+    "brotliBytes": 287231
   }
 }

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Builds the WebAssembly demos from the commits pinned in wasm/sources.json and writes
-# public/wasm/. Run on a Mac with em++ (and TinyGo or Go); Vercel only serves the output.
+# public/wasm/. Run on a Mac with em++ and TinyGo (or Go); Vercel only serves the output.
 # Usage: scripts/build-wasm.sh [forgedb|gateway]   (no argument builds both)
 set -euo pipefail
 
@@ -48,8 +48,40 @@ build_forgedb() {
     pnpm exec tsx scripts/record-session.mts
 }
 
+build_gateway() {
+  fetch_source gateway
+  local pkg="$root/wasm/gateway/gateway" file
+  # The demo compiles these three files unchanged; fail if the committed copies drift from the pin.
+  for file in backend.go ratelimiter.go queue.go; do
+    if ! cmp -s "$build_dir/gateway/gateway/$file" "$pkg/$file"; then
+      echo "wasm/gateway/gateway/$file differs from the pinned commit; copy it from $build_dir/gateway/gateway/" >&2
+      exit 1
+    fi
+  done
+
+  local toolchain
+  if command -v tinygo >/dev/null && (cd wasm/gateway && tinygo build -target wasm -opt=z -no-debug -o "$out_dir/gateway.wasm" .); then
+    cp "$(tinygo env TINYGOROOT)/targets/wasm_exec.js" "$out_dir/gateway-wasm-exec.js"
+    toolchain="tinygo $(tinygo version | awk '{print $3}')"
+  else
+    (cd wasm/gateway && GOOS=js GOARCH=wasm go build -ldflags="-s -w" -o "$out_dir/gateway.wasm" .)
+    cp "$(go env GOROOT)/lib/wasm/wasm_exec.js" "$out_dir/gateway-wasm-exec.js"
+    toolchain=$(go version | awk '{print $3}')
+  fi
+
+  GATEWAY_SHA=$(source_field gateway sha) GATEWAY_TOOLCHAIN=$toolchain \
+    GATEWAY_BROTLI=$(brotli_bytes "$out_dir/gateway.wasm") node -e '
+      const fs = require("fs")
+      const path = "public/wasm/manifest.json"
+      const manifest = fs.existsSync(path) ? JSON.parse(fs.readFileSync(path, "utf8")) : {}
+      manifest.gateway = { sha: process.env.GATEWAY_SHA, toolchain: process.env.GATEWAY_TOOLCHAIN, brotliBytes: Number(process.env.GATEWAY_BROTLI) }
+      fs.writeFileSync(path, JSON.stringify(manifest, null, 2) + "\n")
+      console.log(`gateway: ${manifest.gateway.brotliBytes} bytes brotli, built with ${manifest.gateway.toolchain}`)'
+}
+
 case "$target" in
   forgedb) build_forgedb ;;
-  all) build_forgedb ;;
+  gateway) build_gateway ;;
+  all) build_forgedb; build_gateway ;;
   *) echo "unknown target: $target" >&2; exit 2 ;;
 esac
