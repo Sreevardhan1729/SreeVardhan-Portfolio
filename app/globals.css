@@ -97,3 +97,20 @@ body {
 .skip-link:focus {
   top: 1rem;
 }
+
+/* Small bordered control used by the demos. */
+.control {
+  border: 1px solid var(--rule);
+  border-radius: 0.25rem;
+  background: var(--surface-2);
+  padding: 0.3rem 0.6rem;
+  font-size: 13px;
+  transition: border-color 150ms, color 150ms;
+}
+.control:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.control:disabled {
+  opacity: 0.5;
+}

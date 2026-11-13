@@ -1,5 +1,6 @@
 import { AofPanel } from "@/components/forgedb/aof-panel"
 import { ForgeTerminal } from "@/components/forgedb/terminal"
+import { GatewaySimulation } from "@/components/gateway/simulation"
 import { portfolioData } from "@/lib/portfolio-data"
 
 export default function Home() {
@@ -12,6 +13,7 @@ export default function Home() {
       <div className="mt-10 grid gap-6">
         <ForgeTerminal />
         <AofPanel />
+        <GatewaySimulation />
       </div>
     </main>
   )
