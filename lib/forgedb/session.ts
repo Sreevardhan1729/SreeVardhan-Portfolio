@@ -1,6 +1,7 @@
 import { formatReply } from "./format"
 import type { ForgeModule } from "./loader"
 import { decodeReply, decodeStream, encodeCommand } from "./resp"
+import { withTimeout } from "../timeout"
 import { tokenize } from "./tokenize"
 
 export type ForgeStatus = "idle" | "loading" | "ready" | "unavailable"
@@ -8,6 +9,7 @@ export type RunResult = { lines: string[]; clear?: true }
 
 const MAX_LINE_BYTES = 1024
 const SWEEP_INTERVAL_MS = 1000 // ForgeDB's server runs its expiry sweep every second
+const LOAD_TIMEOUT_MS = 15_000 // a stalled download must not leave the terminal waiting forever
 const PUB_SUB = new Set(["PUBLISH", "SUBSCRIBE", "UNSUBSCRIBE"])
 const encoder = new TextEncoder()
 
@@ -29,13 +31,18 @@ export class ForgeSession {
   constructor(
     private readonly load: () => Promise<ForgeModule>,
     private readonly commands: string[],
+    private readonly loadTimeoutMs = LOAD_TIMEOUT_MS,
   ) {}
+
+  private loadInTime(): Promise<ForgeModule> {
+    return withTimeout(this.load(), this.loadTimeoutMs, "ForgeDB took too long to load")
+  }
 
   start(): Promise<void> {
     this.loading ??= (async () => {
       this.setStatus("loading")
       try {
-        this.module = await this.load()
+        this.module = await this.loadInTime()
         this.sweepTimer = setInterval(() => this.module?.sweep(), SWEEP_INTERVAL_MS)
         this.setStatus("ready")
       } catch {
@@ -93,7 +100,7 @@ export class ForgeSession {
       reply = this.module.exec(encodeCommand(parsed.args))
     } catch {
       try {
-        this.module = await this.load()
+        this.module = await this.loadInTime()
       } catch {
         this.module = null
         this.setStatus("unavailable")

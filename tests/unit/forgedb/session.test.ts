@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import type { ForgeModule } from "@/lib/forgedb/loader"
 import { ForgeSession } from "@/lib/forgedb/session"
 
@@ -32,16 +32,38 @@ function fakeModule(options: { throwOnce?: boolean } = {}): ForgeModule {
   }
 }
 
+// A tiny key-value store that records the order commands reached it.
+function keyValueModule(executed: string[]): ForgeModule {
+  const store = new Map<string, string>()
+  return {
+    exec(request) {
+      const args = [...decoder.decode(request).matchAll(/\$\d+\r\n([^\r]*)\r\n/g)].map((match) => match[1])
+      executed.push(args.join(" "))
+      if (args[0] === "SET") {
+        store.set(args[1], args[2])
+        return encoder.encode("+OK\r\n")
+      }
+      const value = store.get(args[1])
+      return encoder.encode(value === undefined ? "$-1\r\n" : `$${value.length}\r\n${value}\r\n`)
+    },
+    sweep() {},
+    drainAof: () => new Uint8Array(),
+  }
+}
+
 describe("ForgeSession", () => {
+  afterEach(() => vi.useRealTimers())
+
   it("runs commands sent before the module loads, in order", async () => {
     let release: (m: ForgeModule) => void = () => {}
     const loading = new Promise<ForgeModule>((resolve) => (release = resolve))
-    const session = new ForgeSession(() => loading, ["PING"])
-    const first = session.run("PING")
-    const second = session.run('SET a "b c"')
-    release(fakeModule())
-    expect(await first).toEqual({ lines: ["PONG"] })
-    expect(await second).toEqual({ lines: ["OK"] })
+    const executed: string[] = []
+    const session = new ForgeSession(() => loading, [])
+    // Each GET depends on the SET before it, so any reordering changes the replies.
+    const replies = ["SET a 1", "GET a", "SET a 2", "GET a"].map((line) => session.run(line))
+    release(keyValueModule(executed))
+    expect(await Promise.all(replies)).toEqual([{ lines: ["OK"] }, { lines: ['"1"'] }, { lines: ["OK"] }, { lines: ['"2"'] }])
+    expect(executed).toEqual(["SET a 1", "GET a", "SET a 2", "GET a"])
     session.dispose()
   })
 
@@ -57,6 +79,18 @@ describe("ForgeSession", () => {
   it("becomes unavailable when the module cannot load", async () => {
     const session = new ForgeSession(async () => Promise.reject(new Error("blocked")), [])
     expect(await session.run("PING")).toEqual({ lines: ["(error) live demo unavailable"] })
+    session.dispose()
+  })
+
+  it("gives up and reports unavailable when loading stalls", async () => {
+    vi.useFakeTimers()
+    const session = new ForgeSession(() => new Promise<ForgeModule>(() => {}), [], 15_000)
+    const seen: string[] = []
+    session.onStatus((status) => seen.push(status))
+    const reply = session.run("PING")
+    await vi.advanceTimersByTimeAsync(15_000)
+    expect(await reply).toEqual({ lines: ["(error) live demo unavailable"] })
+    expect(seen).toEqual(["loading", "unavailable"])
     session.dispose()
   })
 

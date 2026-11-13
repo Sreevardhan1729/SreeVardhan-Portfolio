@@ -54,6 +54,7 @@ type Sim struct {
 
 	mu          sync.Mutex
 	healthy     map[string]bool
+	probing     map[string]bool // a half-open probe is in flight; Next() has already flipped the backend to Open
 	served      map[string]int
 	failed      map[string]int
 	rateLimited int
@@ -73,6 +74,7 @@ func NewSim(cfg SimConfig) *Sim {
 		started: time.Now(),
 		done:    make(chan struct{}),
 		healthy: map[string]bool{"A": true, "B": true},
+		probing: map[string]bool{},
 		served:  map[string]int{},
 		failed:  map[string]int{},
 	}
@@ -134,6 +136,10 @@ func (s *Sim) Snapshot() SimSnapshot {
 	for i := range backends {
 		backends[i].Served = s.served[backends[i].Name]
 		backends[i].Failed = s.failed[backends[i].Name]
+		if backends[i].State == "open" && s.probing[backends[i].Name] {
+			backends[i].State = "half-open"
+			backends[i].PromoteAtMs = 0
+		}
 	}
 	events := s.events
 	s.events = nil
@@ -159,17 +165,27 @@ func (s *Sim) handle(priority int) {
 		s.record("", "no_backend", priority, nil)
 		return
 	}
+	// Next() skips open backends, so a picked backend that reads Open was half-open: this request is its probe.
+	s.lb.mx.Lock()
+	probe := b.state == Open
+	s.lb.mx.Unlock()
+	s.mu.Lock()
+	if probe {
+		s.probing[b.URL] = true
+	}
+	s.mu.Unlock()
+
 	time.Sleep(time.Duration(s.cfg.LatencyMs) * time.Millisecond)
 	s.mu.Lock()
 	healthy := s.healthy[b.URL]
 	s.mu.Unlock()
 	if healthy {
 		s.lb.RecordSuccess(b)
-		s.record(b.URL, "ok", priority, func() { s.served[b.URL]++ })
+		s.record(b.URL, "ok", priority, func() { s.served[b.URL]++; s.probing[b.URL] = false })
 		return
 	}
 	s.lb.IncrementFailureAndUpdateHealthStatus(b)
-	s.record(b.URL, "failed", priority, func() { s.failed[b.URL]++ })
+	s.record(b.URL, "failed", priority, func() { s.failed[b.URL]++; s.probing[b.URL] = false })
 }
 
 func (s *Sim) record(backend, outcome string, priority int, update func()) {

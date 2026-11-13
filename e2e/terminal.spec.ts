@@ -53,12 +53,12 @@ test("commands sent before ready run in order", async ({ page }) => {
     await route.continue()
   })
   await page.goto("/")
-  await page.getByRole("button", { name: "PING", exact: true }).click()
+  // TTL depends on the SET before it: run in order it reports ~30 seconds, reversed it would be -2.
+  await page.getByRole("button", { name: 'SET visitor "hello" EX 30', exact: true }).click()
   await page.getByRole("button", { name: "TTL visitor", exact: true }).click()
-  await expect(output(page)).toContainText("(integer) -2")
-  const text = await output(page).innerText()
-  expect(text.indexOf("PONG")).toBeGreaterThan(-1)
-  expect(text.indexOf("PONG")).toBeLessThan(text.indexOf("(integer) -2"))
+  await expect(status(page)).toContainText("ready")
+  const live = output(page).locator("div", { hasText: /^\(integer\) / })
+  await expect(live).toHaveText([/\(integer\) (29|30)/])
 })
 
 test("blocked wasm keeps the recorded session", async ({ page }) => {

@@ -181,3 +181,35 @@ func TestBatchShedFirst(t *testing.T) {
 		t.Fatalf("want Shed=[0 1 1] QueueDepth=10, got Shed=%v QueueDepth=%d", snap.Shed, snap.QueueDepth)
 	}
 }
+
+// The real Next() flips a half-open backend back to Open while its probe is in flight; visitors should
+// see that as half-open, not as the breaker opening again.
+func TestSimReportsHalfOpenWhileProbeIsInFlight(t *testing.T) {
+	cfg := fastConfig()
+	cfg.CooldownMs = 60_000
+	cfg.LatencyMs = 150 // slow enough that the probe is observable
+	s := NewSim(cfg)
+	defer s.Close()
+	s.SetHealthy("B", false)
+	submitUntil(t, s, "B open", func(snap SimSnapshot) bool { return backend(t, snap, "B").State == "open" })
+
+	s.SetHealthy("B", true)
+	s.SkipCooldown()
+	for i := 0; i < 8; i++ {
+		s.Submit(fmt.Sprintf("probe-%d", i), PriorityDefault, 1)
+	}
+	deadline := time.Now().Add(3 * time.Second)
+	for {
+		b := backend(t, s.Snapshot(), "B")
+		if b.State == "open" {
+			t.Fatalf("B read as open during its half-open probe (promote at %d)", b.PromoteAtMs)
+		}
+		if b.State == "closed" {
+			return
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("B never closed after a healthy probe; last state %s", b.State)
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+}

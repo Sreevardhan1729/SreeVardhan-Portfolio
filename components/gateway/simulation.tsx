@@ -3,6 +3,7 @@
 import { useEffect, useEffectEvent, useRef, useState } from "react"
 import { GATEWAY_FAIL_EVENT, type GatewayFailDetail } from "@/lib/events"
 import { loadGatewaySim } from "@/lib/gateway/loader"
+import { withTimeout } from "@/lib/timeout"
 import { rollingShare } from "@/lib/gateway/share"
 import { arrivalsFor, burst, type Mix } from "@/lib/gateway/traffic"
 import type { BackendName, BreakerState, GatewaySim, SimConfig, SimEvent, SimSnapshot } from "@/lib/gateway/types"
@@ -14,6 +15,7 @@ import { StaticPipeline } from "./static-pipeline"
 const CONFIG: SimConfig = { QueueCapacity: 20, Workers: 4, LatencyMs: 150, CooldownMs: 30_000, HealthCheckMs: 10_000 }
 const SHARE_WINDOW_MS = 10_000
 const SNAPSHOT_EVERY_MS = 100
+const LOAD_TIMEOUT_MS = 15_000 // past this, keep the static request path instead of waiting
 const BACKENDS: BackendName[] = ["A", "B"]
 const MIXES: { value: Mix; label: string }[] = [
   { value: "default", label: "Mostly default" },
@@ -107,7 +109,7 @@ export function GatewaySimulation() {
     startedRef.current = true
     setStatus("loading")
     windowLoaded()
-      .then(loadGatewaySim)
+      .then(() => withTimeout(loadGatewaySim(), LOAD_TIMEOUT_MS, "gateway simulation took too long to load"))
       .then((loaded) => {
         loaded.start(CONFIG)
         setSim(loaded)
