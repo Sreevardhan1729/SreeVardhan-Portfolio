@@ -4,8 +4,8 @@ The portfolio of Sree Vardhan Reddy, a software engineer who builds React and Ty
 
 Instead of screenshots, the page runs my own systems in the browser:
 
-- **ForgeDB terminal.** [ForgeDB](https://github.com/Sreevardhan1729/ForgeDB), my Redis-compatible database in C++, is compiled to WebAssembly with Emscripten. It runs in the first tab of the demo window in the hero: with a mouse or trackpad the prompt is focused on landing, and keys typed anywhere on the page go to it. Commands go through ForgeDB's real RESP parser, dispatcher and serializer. An append-only log panel shows the writes its dispatcher would persist.
-- **Gateway simulation.** The load balancer (smooth weighted round-robin and circuit breaker), token-bucket rate limiter and priority queue from my [AI Inference Gateway](https://github.com/Sreevardhan1729/ai-inference-gateway) are compiled unchanged to WebAssembly with TinyGo, and run in the window's second tab. You can fail a backend, watch its breaker open, burst one API key into 429s, or overload the queue until it sheds batch traffic first.
+- **ForgeDB terminal.** [ForgeDB](https://github.com/Sreevardhan1729/ForgeDB), my Redis-compatible database in C++, is compiled to WebAssembly with Emscripten. It runs in the demo window in the hero: with a mouse or trackpad the prompt is focused on landing, and keys typed anywhere on the page go to it. Commands go through ForgeDB's real RESP parser, dispatcher and serializer. An append-only log panel shows the writes its dispatcher would persist.
+- **Gateway simulation.** The load balancer (smooth weighted round-robin and circuit breaker), token-bucket rate limiter and priority queue from my [AI Inference Gateway](https://github.com/Sreevardhan1729/ai-inference-gateway) are compiled unchanged to WebAssembly with TinyGo, and run in the same window. On wide screens the window stays pinned beside the hero copy and switches to the gateway as you scroll to its part of the story (its tab works too); on phones the gateway sits right under the terminal. You can fail a backend, watch its breaker open, burst one API key into 429s, or overload the queue until it sheds batch traffic first.
 - **Trace waterfall.** My DevRev internship is drawn like a trace viewer, with each piece of work as a span positioned by the dates of its merged PRs.
 
 Everything is static and runs on Vercel's free plan. There are no server functions; the contact form posts to Formspree.
@@ -18,7 +18,7 @@ Everything is static and runs on Vercel's free plan. There are no server functio
 - **WASM:** `scripts/build-wasm.sh` builds both modules from the commits pinned in `wasm/sources.json`. The output in `public/wasm/` is committed, so the Vercel build only runs `next build`.
   - The C++ shim is in `wasm/forgedb/`.
   - The Go bridge is in `wasm/gateway/`. The three gateway files there are byte-for-byte copies of the pinned commit, and the script fails if they drift.
-- **Loading:** neither module is requested before the page's load event. ForgeDB loads when the browser is idle. The gateway loads only when you point at, focus or open its tab. If a module can't load, a recorded session or the static request path stays in place.
+- **Loading:** neither module is requested before the page's load event. ForgeDB loads when the browser is idle. The gateway loads only when you head for it: scrolling towards its step or its panel, or pointing at, focusing or opening its tab. If a module can't load, a recorded session or the static request path stays in place.
 
 ## Running locally
 

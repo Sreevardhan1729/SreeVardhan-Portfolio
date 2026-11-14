@@ -1,13 +1,12 @@
 import { expect, type Page, test } from "@playwright/test"
+import { showGateway, sim } from "./lab-helpers"
 
-const sim = (page: Page) => page.locator("#gateway-sim")
 const chip = (page: Page, backend: "A" | "B") => page.getByTestId(`breaker-${backend}`)
 const failSwitch = (page: Page, backend: "A" | "B") => page.getByRole("switch", { name: `Backend ${backend} failing` })
-const gatewayTab = (page: Page) => page.getByRole("tab", { name: "Gateway", exact: true })
 
 async function openRunning(page: Page) {
   await page.goto("/")
-  await gatewayTab(page).click()
+  await showGateway(page)
   await expect(sim(page)).toHaveAttribute("data-status", "ready", { timeout: 15_000 })
 }
 
@@ -38,7 +37,8 @@ test("the failing switch keeps its thumb inside the track, left when off and rig
   expect(off.left).toBeLessThan(off.right)
   await toggle.click()
   await expect(toggle).toHaveAttribute("aria-checked", "true")
-  await expect.poll(async () => (await inset()).right).toBeLessThan(off.right)
+  // Measure once the thumb has finished sliding, not halfway across.
+  await thumb.evaluate((element) => Promise.all(element.getAnimations().map((animation) => animation.finished)))
   const on = await inset()
   expect(on.right).toBeGreaterThanOrEqual(1)
   expect(on.right).toBeLessThan(on.left)
@@ -80,7 +80,7 @@ test("skip cooldown while B still fails reopens it", async ({ page }) => {
 
 test("burst produces 429s", async ({ page }) => {
   await openRunning(page)
-  await page.getByRole("button", { name: "Burst one key" }).click()
+  await sim(page).getByRole("button", { name: "Burst one key" }).click()
   await expect
     .poll(async () => Number(/(\d+)/.exec(await page.getByTestId("rate-limited").innerText())?.[1]), { timeout: 3_000 })
     .toBeGreaterThan(0)
@@ -89,7 +89,7 @@ test("burst produces 429s", async ({ page }) => {
 test("blocked wasm shows the static pipeline", async ({ page }) => {
   await page.route("**/gateway.wasm", (route) => route.abort())
   await page.goto("/")
-  await gatewayTab(page).click()
+  await showGateway(page)
   await expect(sim(page)).toHaveAttribute("data-status", "unavailable", { timeout: 15_000 })
   await expect(sim(page).getByRole("list", { name: "Request path through the gateway" })).toBeVisible()
 })
@@ -98,7 +98,7 @@ test("reduced motion stops the dots", async ({ browser }) => {
   const context = await browser.newContext({ reducedMotion: "reduce" })
   const page = await context.newPage()
   await page.goto("http://localhost:3100/")
-  await gatewayTab(page).click()
+  await showGateway(page)
   await expect(sim(page)).toHaveAttribute("data-status", "ready", { timeout: 15_000 })
   await expect(sim(page).locator("canvas")).toHaveAttribute("data-animating", "false")
   await context.close()

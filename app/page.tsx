@@ -15,7 +15,7 @@ export default function Home() {
     <>
       <TopBar />
       <main id="content">
-        <div className="relative isolate overflow-hidden border-b border-rule">
+        <div className="relative isolate overflow-clip border-b border-rule">
           <div aria-hidden="true" className="dot-grid absolute inset-0 -z-10" />
           <div className={container}>
             <Hero />

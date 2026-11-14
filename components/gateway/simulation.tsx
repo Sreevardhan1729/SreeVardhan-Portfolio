@@ -3,7 +3,7 @@
 import { Pause, Play } from "lucide-react"
 import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react"
 import { CONFIG } from "@/lib/gateway/config"
-import { GATEWAY_FAIL_EVENT, type GatewayFailDetail } from "@/lib/events"
+import { GATEWAY_BURST_EVENT, GATEWAY_FAIL_EVENT, type GatewayFailDetail } from "@/lib/events"
 import { loadGatewaySim } from "@/lib/gateway/loader"
 import { withTimeout } from "@/lib/timeout"
 import { rollingShare } from "@/lib/gateway/share"
@@ -126,14 +126,24 @@ export function GatewaySimulation({ active, wake }: { active: boolean; wake: boo
     for (const backend of BACKENDS) sim.setHealthy(backend, !failing[backend])
   }, [failing, sim])
 
+  const sendBurst = () => {
+    for (const arrival of burst()) sim?.submit(arrival.key, arrival.priority, arrival.cost)
+  }
+  const onBurst = useEffectEvent(sendBurst)
+
   useEffect(() => {
     const onFail = (event: Event) => {
       const { backend } = (event as CustomEvent<GatewayFailDetail>).detail
       setPlaying(true)
       setFailing((current) => ({ ...current, [backend]: true }))
     }
+    const onBurstEvent = () => onBurst()
     window.addEventListener(GATEWAY_FAIL_EVENT, onFail)
-    return () => window.removeEventListener(GATEWAY_FAIL_EVENT, onFail)
+    window.addEventListener(GATEWAY_BURST_EVENT, onBurstEvent)
+    return () => {
+      window.removeEventListener(GATEWAY_FAIL_EVENT, onFail)
+      window.removeEventListener(GATEWAY_BURST_EVENT, onBurstEvent)
+    }
   }, [])
 
   // Traffic and readouts run only while this tab is open, on screen and the browser tab is visible.
@@ -349,9 +359,7 @@ export function GatewaySimulation({ active, wake }: { active: boolean; wake: boo
           <button
             type="button"
             disabled={!ready}
-            onClick={() => {
-              for (const arrival of burst()) sim?.submit(arrival.key, arrival.priority, arrival.cost)
-            }}
+            onClick={sendBurst}
             className="pbtn"
           >
             Burst one key

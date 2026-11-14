@@ -1,6 +1,7 @@
 // Page-wide events that let the command menu and page links drive the live demos without importing them.
 export const FORGEDB_RUN_EVENT = "forgedb:run" // detail: { command: string }
 export const GATEWAY_FAIL_EVENT = "gateway:fail" // detail: { backend: "A" | "B" }
+export const GATEWAY_BURST_EVENT = "gateway:burst"
 export const LAB_SHOW_EVENT = "lab:show" // detail: { tab: LabTab }
 
 // The tabs of the live-demo window in the hero.
@@ -16,6 +17,10 @@ export function runInForgeDB(command: string): void {
 
 export function failBackend(backend: "A" | "B"): void {
   window.dispatchEvent(new CustomEvent<GatewayFailDetail>(GATEWAY_FAIL_EVENT, { detail: { backend } }))
+}
+
+export function burstOneKey(): void {
+  window.dispatchEvent(new Event(GATEWAY_BURST_EVENT))
 }
 
 export function showDemo(tab: LabTab): void {
