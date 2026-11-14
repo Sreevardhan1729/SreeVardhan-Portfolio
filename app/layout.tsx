@@ -6,8 +6,8 @@ import { portfolioData } from "@/lib/portfolio-data"
 import { siteDescription, siteTitle, siteUrl } from "@/lib/site"
 import "./globals.css"
 
-const sans = Instrument_Sans({ subsets: ["latin"], variable: "--font-sans", display: "swap" })
-const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono", display: "swap" })
+const sans = Instrument_Sans({ subsets: ["latin"], variable: "--font-instrument-sans", display: "swap" })
+const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-jetbrains-mono", display: "swap" })
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),

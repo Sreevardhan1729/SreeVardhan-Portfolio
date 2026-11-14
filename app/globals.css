@@ -57,8 +57,9 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-ok: var(--ok);
   --color-err: var(--err);
-  --font-sans: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
+  /* next/font registers the families under their own names; reusing --font-sans/--font-mono here would be circular. */
+  --font-sans: var(--font-instrument-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
 html {
