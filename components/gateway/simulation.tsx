@@ -49,11 +49,11 @@ const STATUS_TEXT: Record<Status, string> = {
 }
 const STATUS_DOT: Record<Status, string> = {
   idle: "bg-p-dim",
-  loading: "bg-p-accent live-dot",
+  loading: "bg-p-warn live-dot",
   ready: "bg-p-ok live-dot",
   unavailable: "bg-p-err",
 }
-const BREAKER_DOT: Record<BreakerState, string> = { closed: "bg-p-ok", open: "bg-p-err", "half-open": "bg-p-accent" }
+const BREAKER_DOT: Record<BreakerState, string> = { closed: "bg-p-ok", open: "bg-p-err", "half-open": "bg-p-warn" }
 
 const ANNOUNCE: Record<BreakerState, string> = { open: "opened", "half-open": "half-open", closed: "closed" }
 

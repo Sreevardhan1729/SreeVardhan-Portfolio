@@ -20,7 +20,7 @@ type Props = {
 }
 
 type Dot = { start: number; event: SimEvent }
-type Palette = Record<"fg" | "muted" | "dim" | "rule" | "bg2" | "bg3" | "accent" | "ok" | "err" | "a" | "b" | "mono", string>
+type Palette = Record<"fg" | "muted" | "dim" | "rule" | "bg2" | "bg3" | "accent" | "warn" | "ok" | "err" | "a" | "b" | "mono", string>
 
 const MAX_DOTS = 70
 const SEGMENT_MS = 300
@@ -43,6 +43,7 @@ function readPalette(element: Element): Palette {
     bg2: v("--p-bg-2"),
     bg3: v("--p-bg-3"),
     accent: v("--p-accent"),
+    warn: v("--p-warn"),
     ok: v("--p-ok"),
     err: v("--p-err"),
     a: v("--p-a"),
@@ -190,7 +191,7 @@ export function PipelineCanvas({ pending, metrics, animate }: Props) {
       const y = height / 2
       card(geo.stageX[0], y, geo, "client", `${m.rate} req/s`, palette.rule)
       card(geo.stageX[1], y, geo, "limiter", `429s ${m.rateLimited}`, palette.rule, m.rateLimited > 0 ? palette.err : palette.muted)
-      card(geo.stageX[2], y, geo, "queue", `${m.queue}/${m.capacity}`, palette.rule, m.queue >= m.capacity * 0.8 ? palette.accent : palette.muted)
+      card(geo.stageX[2], y, geo, "queue", `${m.queue}/${m.capacity}`, palette.rule, m.queue >= m.capacity * 0.8 ? palette.warn : palette.muted)
       // Queue depth bar along the bottom of the queue card.
       const barW = geo.nodeW - 16
       const barY = y + geo.nodeH / 2 - 6
@@ -202,7 +203,7 @@ export function PipelineCanvas({ pending, metrics, animate }: Props) {
 
       for (const backend of ["A", "B"] as const) {
         const state = m.states[backend]
-        const stroke = state === "closed" ? (backend === "A" ? palette.a : palette.b) : state === "open" ? palette.err : palette.accent
+        const stroke = state === "closed" ? (backend === "A" ? palette.a : palette.b) : state === "open" ? palette.err : palette.warn
         const detail = state === "closed" ? `${m.share[backend]}%` : state === "open" ? "OPEN" : "HALF-OPEN"
         const detailColor = state === "closed" ? palette.muted : stroke
         card(geo.backendX, BACKEND_Y[backend] * height, geo, `${backend} ×${backend === "A" ? 1 : 3}`, detail, stroke, detailColor)

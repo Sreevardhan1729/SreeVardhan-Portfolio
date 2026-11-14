@@ -264,7 +264,7 @@ export function ForgeTerminal({ active }: { active: boolean }) {
   const caretAt = caret === null ? draft.length : Math.min(caret, draft.length)
   const blinking = focused || !leftPrompt
   const dot =
-    status === "ready" ? "bg-p-ok" : status === "unavailable" ? "bg-p-err" : status === "loading" ? "bg-p-accent live-dot" : "bg-p-dim"
+    status === "ready" ? "bg-p-ok" : status === "unavailable" ? "bg-p-err" : status === "loading" ? "bg-p-warn live-dot" : "bg-p-dim"
 
   return (
     <div

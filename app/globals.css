@@ -13,7 +13,7 @@
   --foreground: #171714;
   --muted: #5c5b54;
   --rule: #dad7ce;
-  --accent: #985a00;
+  --accent: #047857;
   --accent-foreground: #ffffff;
   --ok: #1f7a45;
   --err: #b42318;
@@ -28,8 +28,8 @@
     --foreground: #e9e7e1;
     --muted: #9d9b93;
     --rule: #272923;
-    --accent: #ffb02e;
-    --accent-foreground: #1a1204;
+    --accent: #52e3a4;
+    --accent-foreground: #04130c;
     --ok: #5fd08a;
     --err: #ff7466;
     color-scheme: dark;
@@ -43,8 +43,8 @@
   --foreground: #e9e7e1;
   --muted: #9d9b93;
   --rule: #272923;
-  --accent: #ffb02e;
-  --accent-foreground: #1a1204;
+  --accent: #52e3a4;
+  --accent-foreground: #04130c;
   --ok: #5fd08a;
   --err: #ff7466;
   color-scheme: dark;
@@ -70,6 +70,7 @@
   --color-p-dim: var(--p-dim);
   --color-p-rule: var(--p-rule);
   --color-p-accent: var(--p-accent);
+  --color-p-warn: var(--p-warn);
   --color-p-ok: var(--p-ok);
   --color-p-err: var(--p-err);
   --color-p-a: var(--p-a);
@@ -155,7 +156,8 @@ html {
   --p-muted: #9a988f;
   --p-dim: #5d5c56;
   --p-rule: #262a23;
-  --p-accent: #ffb02e;
+  --p-accent: #52e3a4;
+  --p-warn: #ffb02e; /* half-open breakers, a filling queue, a module still loading */
   --p-ok: #5fd08a;
   --p-err: #ff6b5e;
   --p-a: #6cb8ff;

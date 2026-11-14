@@ -23,7 +23,7 @@ export default function OpengraphImage() {
         }}
       >
         <div style={{ display: "flex", flexDirection: "column" }}>
-          <div style={{ fontSize: 26, color: "#ffb02e" }}>{headline}</div>
+          <div style={{ fontSize: 26, color: "#52e3a4" }}>{headline}</div>
           <div style={{ marginTop: 26, fontSize: 92, letterSpacing: -3, lineHeight: 1 }}>{name}</div>
           <div style={{ marginTop: 30, fontSize: 34, lineHeight: 1.35, color: "#9d9b93", maxWidth: 940 }}>{tagline}</div>
         </div>
@@ -39,7 +39,7 @@ export default function OpengraphImage() {
           }}
         >
           <div style={{ display: "flex" }}>
-            <span style={{ color: "#ffb02e" }}>127.0.0.1:6379&gt;</span>
+            <span style={{ color: "#52e3a4" }}>127.0.0.1:6379&gt;</span>
             <span style={{ marginLeft: 14 }}>PING</span>
           </div>
           <div style={{ marginTop: 8, display: "flex" }}>PONG</div>
