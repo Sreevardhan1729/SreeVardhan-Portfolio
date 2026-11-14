@@ -69,7 +69,7 @@ export const portfolioData = {
     email: "itssreevardhan@gmail.com",
     photo: "/images/sree-vardhan-reddy.jpg",
     resume:
-      "https://drive.google.com/file/d/1A9pcq4ArSuREJSgF7hr9oVLg6hfgRolg/view?usp=sharing",
+      "https://drive.google.com/file/d/12Bx3X4m747QFNTrk2zq8PwqXSHEK5yrS",
     social: {
       github: "https://github.com/Sreevardhan1729",
       linkedin: "https://www.linkedin.com/in/sreevardhanreddy/",
