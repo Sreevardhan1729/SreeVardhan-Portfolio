@@ -22,6 +22,27 @@ async function openBreaker(page: Page) {
   await expect(chip(page, "B")).not.toContainText("half-open in 0s")
 }
 
+test("the failing switch keeps its thumb inside the track, left when off and right when on", async ({ page }) => {
+  await openRunning(page)
+  const toggle = failSwitch(page, "A")
+  const track = toggle.locator("span[aria-hidden]")
+  const thumb = track.locator("span")
+  const inset = async () => {
+    const outer = (await track.boundingBox())!
+    const inner = (await thumb.boundingBox())!
+    return { left: inner.x - outer.x, right: outer.x + outer.width - (inner.x + inner.width) }
+  }
+  const off = await inset()
+  expect(off.left).toBeGreaterThanOrEqual(1)
+  expect(off.left).toBeLessThan(off.right)
+  await toggle.click()
+  await expect(toggle).toHaveAttribute("aria-checked", "true")
+  await expect.poll(async () => (await inset()).right).toBeLessThan(off.right)
+  const on = await inset()
+  expect(on.right).toBeGreaterThanOrEqual(1)
+  expect(on.right).toBeLessThan(on.left)
+})
+
 test("share settles near 1:3", async ({ page }) => {
   await openRunning(page)
   await page.waitForTimeout(8_000)

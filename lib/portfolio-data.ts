@@ -110,7 +110,7 @@ export const portfolioData = {
         {
           title: "TypeScript strict mode.",
           text: "Moved shared and feature libraries of DevRev's web app to strict TypeScript across 23 PRs, fixing errors with real type narrowing instead of assertions, and removed about 1,700 lines of dead code.",
-          period: { start: "2026-02-24", end: "2026-04-10" },
+          period: { start: "2026-01", end: "2026-04-10" },
         },
         {
           title: "Real-time export progress.",
