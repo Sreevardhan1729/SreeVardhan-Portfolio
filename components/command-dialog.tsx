@@ -3,7 +3,7 @@
 import { Command } from "cmdk"
 import { useTheme } from "next-themes"
 import { NAV } from "@/lib/nav"
-import { failBackend, runInForgeDB } from "@/lib/events"
+import { failBackend, runInForgeDB, showDemo } from "@/lib/events"
 import { portfolioData } from "@/lib/portfolio-data"
 
 type Action = { label: string; group: string; run: () => void }
@@ -36,6 +36,7 @@ export function CommandDialog({ open, onClose }: { open: boolean; onClose: () =>
       group: "Live demos",
       run: () => runInForgeDB('SET visitor "hello" EX 30'),
     },
+    { label: "Open the gateway simulation", group: "Live demos", run: () => showDemo("gateway") },
     { label: "Fail backend B", group: "Live demos", run: () => failBackend("B") },
   ]
   const groups = [...new Set(actions.map((action) => action.group))]

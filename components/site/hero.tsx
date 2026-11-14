@@ -1,6 +1,6 @@
 import { ArrowUpRight, FileText, Mail } from "lucide-react"
 import Image from "next/image"
-import { ForgeTerminal } from "@/components/forgedb/terminal"
+import { LabWindow } from "@/components/lab/lab-window"
 import { portfolioData } from "@/lib/portfolio-data"
 import { primaryButton, secondaryButton } from "./buttons"
 import { CopyEmailButton } from "./copy-email-button"
@@ -41,8 +41,11 @@ export function Hero() {
             <span className="hidden lg:inline">→</span>
           </span>
           <span>
-            That terminal is <span className="font-medium text-foreground">ForgeDB</span>, the Redis-compatible database I
-            wrote in C++, compiled to WebAssembly and running in your browser. Try a command.
+            That window runs two of my systems live in your browser:{" "}
+            <span className="font-medium text-foreground">ForgeDB</span>, the Redis-compatible database I wrote in C++, and
+            my <span className="font-medium text-foreground">LLM gateway</span> in Go.{" "}
+            <span className="pointer-coarse:hidden">Just start typing</span>
+            <span className="hidden pointer-coarse:inline">Tap the terminal to type</span>, or open the Gateway tab.
           </span>
         </p>
         <div data-testid="hero-actions" className="mt-8 flex flex-wrap items-center gap-2">
@@ -65,7 +68,7 @@ export function Hero() {
           </a>
         </div>
       </div>
-      <ForgeTerminal />
+      <LabWindow />
     </section>
   )
 }

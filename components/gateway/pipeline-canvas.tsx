@@ -70,7 +70,8 @@ export function PipelineCanvas({ pending, metrics, animate }: Props) {
 
     const layout = () => {
       const narrow = width < 520
-      const nodeW = narrow ? 58 : 104
+      // Wide enough for the labels, narrow enough that neighbouring stages never touch.
+      const nodeW = Math.min(104, Math.max(58, Math.floor(width * 0.155)))
       const nodeH = narrow ? 40 : 46
       const left = nodeW / 2 + (narrow ? 10 : 20)
       const right = width - nodeW / 2 - (narrow ? 10 : 20)

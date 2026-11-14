@@ -116,6 +116,7 @@ test("types a short live demo when left alone", async ({ page }) => {
   await expect(output(page)).toContainText("PONG")
   await expect(output(page).locator("div", { hasText: /^\(integer\) / })).toHaveText([/\(integer\) (29|30)/])
   await expect(input(page)).toHaveValue("")
+  await expect(output(page)).toContainText("# your turn")
 })
 
 test("clicking the terminal before it is live skips the demo", async ({ page }) => {
@@ -135,4 +136,48 @@ test("the demo runs without typing animation under reduced motion", async ({ bro
   await expect(page.locator("#forgedb-terminal")).toHaveAttribute("data-intro", "done", { timeout: 15_000 })
   await expect(output(page)).toContainText("PONG")
   await context.close()
+})
+
+test("typing anywhere on the page goes to the prompt", async ({ page }) => {
+  await page.goto("/")
+  // Keys go to the prompt only while the terminal is mostly on screen; phones scroll there smoothly.
+  await page.locator("#forgedb-terminal").scrollIntoViewIfNeeded()
+  await expect(page.locator("#forgedb-terminal")).toBeInViewport({ ratio: 0.5 })
+  await expect(status(page)).toContainText("live")
+  await page.keyboard.type('SET typed "yes"')
+  await expect(input(page)).toBeFocused()
+  await expect(input(page)).toHaveValue('SET typed "yes"')
+  await page.keyboard.press("Enter")
+  await page.keyboard.type("GET typed")
+  await page.keyboard.press("Enter")
+  await expect(output(page)).toContainText('"yes"')
+})
+
+test("typing while a link has focus leaves the prompt alone", async ({ page }) => {
+  await page.goto("/")
+  await expect(status(page)).toContainText("live")
+  await page.getByTestId("hero-actions").getByRole("link", { name: "Resume" }).focus()
+  await page.keyboard.type("x")
+  await expect(input(page)).toHaveValue("")
+  await expect(input(page)).not.toBeFocused()
+})
+
+test("typing over the demo replaces what it was typing", async ({ page }) => {
+  await page.goto("/")
+  const terminal = page.locator("#forgedb-terminal")
+  await terminal.scrollIntoViewIfNeeded()
+  await expect(terminal).toHaveAttribute("data-intro", "running", { timeout: 15_000 })
+  await page.keyboard.type("GET visitor")
+  await expect(terminal).toHaveAttribute("data-intro", "skipped")
+  await expect(input(page)).toHaveValue("GET visitor")
+  await page.waitForTimeout(800)
+  await expect(input(page)).toHaveValue("GET visitor")
+})
+
+test("shows a blinking cursor at the prompt until it is focused", async ({ page }) => {
+  await page.goto("/")
+  const cursor = page.getByTestId("prompt-cursor")
+  await expect(cursor).toBeVisible()
+  await input(page).focus()
+  await expect(cursor).toBeHidden()
 })

@@ -1,7 +1,9 @@
 import { GitMerge } from "lucide-react"
 import type { ReactNode } from "react"
 import { AofPanel } from "@/components/forgedb/aof-panel"
-import { GatewaySimulation } from "@/components/gateway/simulation"
+import { StaticPipeline } from "@/components/gateway/static-pipeline"
+import { ShowDemoLink } from "@/components/lab/show-demo-link"
+import { CONFIG } from "@/lib/gateway/config"
 import { type FeaturedProject as Featured, portfolioData } from "@/lib/portfolio-data"
 import { ExternalLink } from "./external-link"
 import { Section } from "./section"
@@ -66,6 +68,36 @@ function FeaturedProject({
   )
 }
 
+// The request path, with a way back up to the live simulation in the hero.
+function GatewayPath() {
+  return (
+    <div className="panel overflow-hidden">
+      <div className="flex items-center gap-3 border-b border-p-rule bg-p-bg-2 px-4 py-2.5 font-mono text-[11.5px]">
+        <span aria-hidden="true" className="panel-dots">
+          <span />
+          <span />
+          <span />
+        </span>
+        <span className="text-p-muted">request path</span>
+      </div>
+      <StaticPipeline layout="column" />
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-3 border-t border-p-rule px-4 py-3.5">
+        <ShowDemoLink
+          tab="gateway"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-p-accent/60 px-3 py-1.5 text-[12.5px] text-p-accent transition-colors hover:bg-p-accent/10"
+        >
+          Run the live simulation
+          <span aria-hidden="true">↑</span>
+        </ShowDemoLink>
+        <p className="min-w-0 flex-1 text-[11.5px] leading-relaxed text-p-muted">
+          Demo settings: queue {CONFIG.QueueCapacity} jobs and {CONFIG.Workers} workers (the real gateway runs 1,000 and
+          50). Breakers open after 5 failures and half-open after 30 s, on the next 10 s health check.
+        </p>
+      </div>
+    </div>
+  )
+}
+
 function MeerkatPulls({ project }: { project: Featured }) {
   if (project.visual.kind !== "pull-requests") return null
   const { repo, pulls } = project.visual
@@ -112,16 +144,19 @@ export function Projects() {
         <FeaturedProject project={forgedb} index={0} layout="split">
           <p className="mb-3 text-[14px] leading-relaxed text-muted">
             The{" "}
-            <a href="#forgedb-terminal" className="text-foreground underline decoration-rule underline-offset-4 hover:text-accent">
-              terminal at the top
-            </a>{" "}
+            <ShowDemoLink
+              tab="forgedb"
+              className="text-foreground underline decoration-rule underline-offset-4 hover:text-accent"
+            >
+              ForgeDB terminal at the top
+            </ShowDemoLink>{" "}
             is this database. Every write you run there goes through ForgeDB&apos;s own dispatcher, which appends it to the
             log:
           </p>
           <AofPanel />
         </FeaturedProject>
-        <FeaturedProject project={gateway} index={1} layout="stacked">
-          <GatewaySimulation />
+        <FeaturedProject project={gateway} index={1} layout="split">
+          <GatewayPath />
         </FeaturedProject>
         <FeaturedProject project={meerkat} index={2} layout="split">
           <MeerkatPulls project={meerkat} />
