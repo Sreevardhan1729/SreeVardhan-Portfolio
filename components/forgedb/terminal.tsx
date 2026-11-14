@@ -40,6 +40,11 @@ function trimmed(entries: Entry[]): Entry[] {
 const isError = (line: string) => line.startsWith("(error)") || line === "Invalid argument(s)"
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
+// Keys that change the prompt: they mean the visitor is using the terminal.
+const EDIT_KEYS = new Set(["Backspace", "Delete", "Enter", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"])
+const editsPrompt = (event: KeyboardEvent) =>
+  !event.ctrlKey && !event.metaKey && !event.altKey && (event.key.length === 1 || EDIT_KEYS.has(event.key))
+
 // Keys typed with nothing focused, or with a button in the demo window focused, belong to the prompt.
 function keysAreFree(): boolean {
   const focused = document.activeElement
@@ -53,6 +58,9 @@ export function ForgeTerminal({ active }: { active: boolean }) {
   const [intro, setIntro] = useState<IntroState>("pending")
   const [visible, setVisible] = useState(false)
   const [focused, setFocused] = useState(false)
+  // Once the visitor leaves the prompt, its cursor stops blinking and turns hollow, like an unfocused terminal.
+  const [leftPrompt, setLeftPrompt] = useState(false)
+  const [caret, setCaret] = useState<number | null>(null) // null: at the end of the draft
   const history = useRef<string[]>([])
   const historyIndex = useRef(-1)
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -61,6 +69,8 @@ export function ForgeTerminal({ active }: { active: boolean }) {
   const interacted = useRef(false)
   const introStarted = useRef(false)
   const introTyping = useRef(false)
+  const autoFocusTried = useRef(false)
+  const autoFocusing = useRef(false)
   const unmounted = useRef(false)
 
   const run = (command: string): Promise<RunResult> => {
@@ -80,10 +90,12 @@ export function ForgeTerminal({ active }: { active: boolean }) {
 
   // Any sign the visitor wants the terminal stops the intro, clears its half-typed command and starts loading the module.
   const engage = () => {
+    if (autoFocusing.current) return
     interacted.current = true
     if (introTyping.current) {
       introTyping.current = false
       setDraft("")
+      setCaret(null)
     }
     setIntro((state) => (state === "done" ? state : "skipped"))
     void getForgeSession().start()
@@ -94,6 +106,18 @@ export function ForgeTerminal({ active }: { active: boolean }) {
     void run(command)
   })
 
+  // On landing with a mouse or trackpad, focus the prompt so its cursor blinks there, unless the visitor already
+  // focused something. Phones are left alone: focusing there can open the on-screen keyboard over the page.
+  const autoFocus = useEffectEvent((onScreen: boolean) => {
+    if (autoFocusTried.current) return
+    autoFocusTried.current = true
+    if (!onScreen || !active || interacted.current || !keysAreFree()) return
+    if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return
+    autoFocusing.current = true
+    inputRef.current?.focus({ preventScroll: true })
+    autoFocusing.current = false
+  })
+
   const onPageKey = useEffectEvent((event: globalThis.KeyboardEvent) => {
     if (!active || !visible) return
     const key = capturedKey(event, keysAreFree())
@@ -101,6 +125,7 @@ export function ForgeTerminal({ active }: { active: boolean }) {
     event.preventDefault()
     inputRef.current?.focus({ preventScroll: true })
     setDraft((current) => current + key)
+    setCaret(null)
   })
 
   const playIntro = useEffectEvent(async () => {
@@ -116,6 +141,7 @@ export function ForgeTerminal({ active }: { active: boolean }) {
           if (stopped()) return
           introTyping.current = true
           setDraft(command.slice(0, i))
+          setCaret(null)
           await sleep(TYPE_MS)
         }
         await sleep(160)
@@ -123,6 +149,7 @@ export function ForgeTerminal({ active }: { active: boolean }) {
       if (stopped()) return
       introTyping.current = false
       setDraft("")
+      setCaret(null)
       await run(command)
       await sleep(reduce ? 0 : 420)
     }
@@ -165,7 +192,13 @@ export function ForgeTerminal({ active }: { active: boolean }) {
     const onKey = (event: globalThis.KeyboardEvent) => onPageKey(event)
     window.addEventListener(FORGEDB_RUN_EVENT, onRun)
     window.addEventListener("keydown", onKey)
-    const observer = new IntersectionObserver(([entry]) => setVisible(entry.isIntersecting), { threshold: 0.4 })
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        setVisible(entry.isIntersecting)
+        autoFocus(entry.isIntersecting)
+      },
+      { threshold: 0.4 },
+    )
     observer.observe(rootRef.current!)
     return () => {
       unmounted.current = true
@@ -196,15 +229,30 @@ export function ForgeTerminal({ active }: { active: boolean }) {
     event.preventDefault()
     void run(draft)
     setDraft("")
+    setCaret(null)
   }
 
   const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Escape") return inputRef.current?.blur()
+    if (!editsPrompt(event)) return
+    // Typing over the intro replaces its half-typed command instead of adding to it.
+    if (introTyping.current) {
+      event.preventDefault()
+      engage()
+      if (event.key.length === 1) {
+        setDraft(event.key)
+        setCaret(null)
+      }
+      return
+    }
+    engage()
     if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return
     event.preventDefault()
     const next = historyIndex.current + (event.key === "ArrowUp" ? 1 : -1)
     if (next < -1 || next >= history.current.length) return
     historyIndex.current = next
     setDraft(next === -1 ? "" : history.current[next])
+    setCaret(null)
   }
 
   // Clicking the screen focuses the prompt, unless the visitor is selecting text to copy.
@@ -213,6 +261,8 @@ export function ForgeTerminal({ active }: { active: boolean }) {
   }
 
   const hasRecorded = entries.some((entry) => entry.source === "recorded")
+  const caretAt = caret === null ? draft.length : Math.min(caret, draft.length)
+  const blinking = focused || !leftPrompt
   const dot =
     status === "ready" ? "bg-p-ok" : status === "unavailable" ? "bg-p-err" : status === "loading" ? "bg-p-accent live-dot" : "bg-p-dim"
 
@@ -275,34 +325,55 @@ export function ForgeTerminal({ active }: { active: boolean }) {
             <input
               ref={inputRef}
               value={draft}
-              onChange={(event) => setDraft(event.target.value)}
+              onChange={(event) => {
+                setDraft(event.target.value)
+                setCaret(event.target.selectionStart)
+              }}
+              onSelect={(event) => setCaret(event.currentTarget.selectionStart)}
               onKeyDown={onKeyDown}
               onFocus={() => setFocused(true)}
-              onBlur={() => setFocused(false)}
+              onBlur={() => {
+                setFocused(false)
+                setLeftPrompt(true)
+              }}
               aria-label="ForgeDB command"
               autoComplete="off"
               autoCapitalize="off"
               autoCorrect="off"
               spellCheck={false}
-              placeholder={focused ? "type a command · ↵ runs it · ↑ history" : ""}
-              className="w-full bg-transparent text-base text-p-fg caret-[var(--p-accent)] placeholder:text-p-dim focus:outline-none sm:text-[13px]"
+              className="w-full bg-transparent text-base text-p-fg caret-transparent focus:outline-none sm:text-[13px]"
             />
-            {/* Until the prompt has focus, draw a shell's block cursor after the text so it reads as a live prompt. */}
-            {!focused && (
+            {/* A shell's block cursor drawn over the input at the caret, with the character under it inverted. */}
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-y-0 left-0 flex items-center whitespace-pre text-base sm:text-[13px]"
+            >
+              <span className="invisible">{draft.slice(0, caretAt)}</span>
               <span
-                aria-hidden="true"
-                className="pointer-events-none absolute inset-y-0 left-0 flex items-center whitespace-pre text-base sm:text-[13px]"
+                key={`${caretAt}:${draft.length}`}
+                data-testid="prompt-cursor"
+                data-blinking={blinking}
+                className={
+                  blinking
+                    ? "prompt-cursor bg-p-accent text-p-bg"
+                    : "text-transparent outline outline-1 -outline-offset-1 outline-p-accent/70"
+                }
               >
-                <span className="invisible">{draft}</span>
-                <span data-testid="prompt-cursor" className="prompt-cursor inline-block h-[1.15em] w-[0.6em] bg-p-accent" />
-                {draft === "" && intro !== "running" && (
-                  <span className="ml-2.5 text-p-dim">
-                    <span className="pointer-coarse:hidden">start typing</span>
-                    <span className="hidden pointer-coarse:inline">tap to type</span>
-                  </span>
-                )}
+                {draft[caretAt] ?? " "}
               </span>
-            )}
+              {draft === "" && intro !== "running" && (
+                <span className="ml-2.5 text-p-dim">
+                  {focused ? (
+                    "type a command · ↵ runs it · ↑ history"
+                  ) : (
+                    <>
+                      <span className="pointer-coarse:hidden">start typing</span>
+                      <span className="hidden pointer-coarse:inline">tap to type</span>
+                    </>
+                  )}
+                </span>
+              )}
+            </span>
           </span>
         </form>
       </div>

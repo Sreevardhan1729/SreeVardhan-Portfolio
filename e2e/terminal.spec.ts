@@ -10,10 +10,10 @@ async function runCommand(page: Page, command: string) {
   await input(page).press("Enter")
 }
 
-// Focusing the prompt counts as using the terminal, so the self-typing intro steps aside.
+// Clicking the prompt counts as using the terminal, so the self-typing intro steps aside.
 async function openReady(page: Page) {
   await page.goto("/")
-  await input(page).focus()
+  await input(page).click()
   await expect(status(page)).toContainText("live")
   await expect(page.locator("#forgedb-terminal")).toHaveAttribute("data-intro", "skipped")
 }
@@ -158,7 +158,8 @@ test("typing while a link has focus leaves the prompt alone", async ({ page }) =
   await expect(status(page)).toContainText("live")
   await page.getByTestId("hero-actions").getByRole("link", { name: "Resume" }).focus()
   await page.keyboard.type("x")
-  await expect(input(page)).toHaveValue("")
+  // The intro may be typing its own commands, none of which contain a lowercase x.
+  await expect(input(page)).not.toHaveValue(/x/)
   await expect(input(page)).not.toBeFocused()
 })
 
@@ -174,10 +175,34 @@ test("typing over the demo replaces what it was typing", async ({ page }) => {
   await expect(input(page)).toHaveValue("GET visitor")
 })
 
-test("shows a blinking cursor at the prompt until it is focused", async ({ page }) => {
+test("lands with the prompt focused and blinking, plays the intro into it, and rests after a click away", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "phones keep the keyboard closed")
   await page.goto("/")
   const cursor = page.getByTestId("prompt-cursor")
-  await expect(cursor).toBeVisible()
-  await input(page).focus()
-  await expect(cursor).toBeHidden()
+  await expect(input(page)).toBeFocused()
+  await expect(cursor).toHaveAttribute("data-blinking", "true")
+  await expect(page.locator("#forgedb-terminal")).toHaveAttribute("data-intro", "done", { timeout: 15_000 })
+  await expect(input(page)).toBeFocused()
+  await page.locator("h1").click()
+  await expect(input(page)).not.toBeFocused()
+  await expect(cursor).toHaveAttribute("data-blinking", "false")
+})
+
+test("Escape leaves the prompt", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop", "phones keep the keyboard closed")
+  await page.goto("/")
+  await expect(input(page)).toBeFocused()
+  await page.keyboard.press("Escape")
+  await expect(input(page)).not.toBeFocused()
+})
+
+test("phones get a blinking cursor without opening the keyboard", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "mobile", "narrow screens only")
+  await page.goto("/")
+  await page.locator("#forgedb-terminal").scrollIntoViewIfNeeded()
+  await expect(status(page)).toContainText("live")
+  await expect(input(page)).not.toBeFocused()
+  await expect(page.getByTestId("prompt-cursor")).toHaveAttribute("data-blinking", "true")
 })

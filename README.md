@@ -4,7 +4,7 @@ The portfolio of Sree Vardhan Reddy, a software engineer who builds React and Ty
 
 Instead of screenshots, the page runs my own systems in the browser:
 
-- **ForgeDB terminal.** [ForgeDB](https://github.com/Sreevardhan1729/ForgeDB), my Redis-compatible database in C++, is compiled to WebAssembly with Emscripten. It runs in the first tab of the demo window in the hero: start typing anywhere on the page and the keys go to its prompt. Commands go through ForgeDB's real RESP parser, dispatcher and serializer. An append-only log panel shows the writes its dispatcher would persist.
+- **ForgeDB terminal.** [ForgeDB](https://github.com/Sreevardhan1729/ForgeDB), my Redis-compatible database in C++, is compiled to WebAssembly with Emscripten. It runs in the first tab of the demo window in the hero: with a mouse or trackpad the prompt is focused on landing, and keys typed anywhere on the page go to it. Commands go through ForgeDB's real RESP parser, dispatcher and serializer. An append-only log panel shows the writes its dispatcher would persist.
 - **Gateway simulation.** The load balancer (smooth weighted round-robin and circuit breaker), token-bucket rate limiter and priority queue from my [AI Inference Gateway](https://github.com/Sreevardhan1729/ai-inference-gateway) are compiled unchanged to WebAssembly with TinyGo, and run in the window's second tab. You can fail a backend, watch its breaker open, burst one API key into 429s, or overload the queue until it sheds batch traffic first.
 - **Trace waterfall.** My DevRev internship is drawn like a trace viewer, with each piece of work as a span positioned by the dates of its merged PRs.
 
