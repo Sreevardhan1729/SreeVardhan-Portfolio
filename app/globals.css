@@ -57,6 +57,19 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-ok: var(--ok);
   --color-err: var(--err);
+  /* Demo panels: always dark, whatever the page theme. */
+  --color-p-bg: var(--p-bg);
+  --color-p-bg-2: var(--p-bg-2);
+  --color-p-bg-3: var(--p-bg-3);
+  --color-p-fg: var(--p-fg);
+  --color-p-muted: var(--p-muted);
+  --color-p-dim: var(--p-dim);
+  --color-p-rule: var(--p-rule);
+  --color-p-accent: var(--p-accent);
+  --color-p-ok: var(--p-ok);
+  --color-p-err: var(--p-err);
+  --color-p-a: var(--p-a);
+  --color-p-b: var(--p-b);
   /* next/font registers the families under their own names; reusing --font-sans/--font-mono here would be circular. */
   --font-sans: var(--font-instrument-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -99,23 +112,6 @@ body {
   top: 1rem;
 }
 
-/* Small bordered control used by the demos. */
-.control {
-  border: 1px solid var(--rule);
-  border-radius: 0.25rem;
-  background: var(--surface-2);
-  padding: 0.3rem 0.6rem;
-  font-size: 13px;
-  transition: border-color 150ms, color 150ms;
-}
-.control:hover:not(:disabled) {
-  border-color: var(--accent);
-  color: var(--accent);
-}
-.control:disabled {
-  opacity: 0.5;
-}
-
 html {
   scroll-padding-top: 4rem;
 }
@@ -143,5 +139,86 @@ html {
   to {
     opacity: 1;
     transform: none;
+  }
+}
+
+/* Dark product-style panels for the live demos and the trace, on both page themes. */
+.panel {
+  --p-bg: #0f110e;
+  --p-bg-2: #141712;
+  --p-bg-3: #1b1f18;
+  --p-fg: #ecebe5;
+  --p-muted: #9a988f;
+  --p-dim: #5d5c56;
+  --p-rule: #262a23;
+  --p-accent: #ffb02e;
+  --p-ok: #5fd08a;
+  --p-err: #ff6b5e;
+  --p-a: #6cb8ff;
+  --p-b: #b69cff;
+  color-scheme: dark;
+  background: var(--p-bg);
+  color: var(--p-fg);
+  border: 1px solid var(--p-rule);
+  border-radius: 0.875rem;
+  box-shadow:
+    0 0 0 1px rgb(0 0 0 / 0.04),
+    0 1px 0 0 rgb(255 255 255 / 0.04) inset,
+    0 24px 48px -24px rgb(0 0 0 / 0.45);
+}
+
+/* Window title bar dots. */
+.panel-dots {
+  display: flex;
+  gap: 6px;
+}
+.panel-dots > span {
+  width: 10px;
+  height: 10px;
+  border-radius: 9999px;
+  background: var(--p-bg-3);
+  border: 1px solid var(--p-rule);
+}
+
+/* Small bordered control inside a panel. */
+.pbtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 1px solid var(--p-rule);
+  border-radius: 0.5rem;
+  background: var(--p-bg-3);
+  padding: 0.35rem 0.7rem;
+  font-size: 12.5px;
+  color: var(--p-fg);
+  transition: border-color 150ms, color 150ms, background-color 150ms;
+}
+.pbtn:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--p-accent) 70%, transparent);
+  color: var(--p-accent);
+}
+.pbtn:disabled {
+  opacity: 0.45;
+}
+
+/* Faint dot grid used behind the hero. */
+.dot-grid {
+  background-image: radial-gradient(color-mix(in srgb, var(--foreground) 14%, transparent) 1px, transparent 1px);
+  background-size: 22px 22px;
+  mask-image: radial-gradient(ellipse 80% 70% at 50% 0%, black 30%, transparent 75%);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .live-dot {
+    animation: live-pulse 1.6s ease-in-out infinite;
+  }
+}
+@keyframes live-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
   }
 }

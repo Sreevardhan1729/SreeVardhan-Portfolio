@@ -59,7 +59,9 @@ test("skip cooldown while B still fails reopens it", async ({ page }) => {
 test("burst produces 429s", async ({ page }) => {
   await openRunning(page)
   await page.getByRole("button", { name: "Burst from one API key" }).click()
-  await expect(page.getByTestId("rate-limited")).not.toHaveText("429s: 0", { timeout: 3_000 })
+  await expect
+    .poll(async () => Number(/(\d+)/.exec(await page.getByTestId("rate-limited").innerText())?.[1]), { timeout: 3_000 })
+    .toBeGreaterThan(0)
 })
 
 test("blocked wasm shows the static pipeline", async ({ page }) => {

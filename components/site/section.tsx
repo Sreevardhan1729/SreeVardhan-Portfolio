@@ -1,16 +1,12 @@
 import type { ReactNode } from "react"
 
-// A numbered page section: the label column sticks beside the content on wide screens.
+// A numbered page section with a full-width heading rule.
 export function Section({ id, index, title, children }: { id: string; index: string; title: string; children: ReactNode }) {
   return (
-    <section
-      id={id}
-      aria-labelledby={`${id}-heading`}
-      className="scroll-mt-16 border-t border-rule py-16 sm:py-20 lg:grid lg:grid-cols-[11rem_minmax(0,1fr)] lg:gap-10"
-    >
-      <header className="mb-8 lg:sticky lg:top-24 lg:mb-0 lg:self-start">
-        <p className="font-mono text-[11px] text-accent">{index}</p>
-        <h2 id={`${id}-heading`} className="mt-1 font-mono text-[13px] uppercase tracking-[0.18em]">
+    <section id={id} aria-labelledby={`${id}-heading`} className="scroll-mt-16 py-20 sm:py-24">
+      <header className="mb-10 flex items-baseline gap-4 border-b border-rule pb-5 sm:mb-12">
+        <span className="font-mono text-[12px] text-accent">{index}</span>
+        <h2 id={`${id}-heading`} className="text-3xl font-semibold tracking-[-0.025em] sm:text-4xl">
           {title}
         </h2>
       </header>

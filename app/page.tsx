@@ -8,20 +8,29 @@ import { Projects } from "@/components/site/projects"
 import { Skills } from "@/components/site/skills"
 import { TopBar } from "@/components/site/top-bar"
 
+const container = "mx-auto max-w-6xl px-4 sm:px-6 lg:px-8"
+
 export default function Home() {
   return (
     <>
       <TopBar />
-      <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-        <main id="content">
-          <Hero />
+      <main id="content">
+        <div className="relative isolate overflow-hidden border-b border-rule">
+          <div aria-hidden="true" className="dot-grid absolute inset-0 -z-10" />
+          <div className={container}>
+            <Hero />
+          </div>
+        </div>
+        <div className={container}>
           <About />
           <Experience />
           <Projects />
           <Skills />
           <Achievements />
           <Contact />
-        </main>
+        </div>
+      </main>
+      <div className={container}>
         <Footer />
       </div>
     </>

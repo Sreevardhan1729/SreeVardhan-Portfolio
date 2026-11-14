@@ -1,9 +1,9 @@
+import { ArrowUpRight, FileText, Mail } from "lucide-react"
 import Image from "next/image"
 import { ForgeTerminal } from "@/components/forgedb/terminal"
 import { portfolioData } from "@/lib/portfolio-data"
 import { primaryButton, secondaryButton } from "./buttons"
 import { CopyEmailButton } from "./copy-email-button"
-import { ArrowUpRight, FileText, Mail } from "lucide-react"
 
 export function Hero() {
   const { personal } = portfolioData
@@ -11,33 +11,41 @@ export function Hero() {
     <section
       id="top"
       aria-label="Introduction"
-      className="grid gap-10 pb-16 pt-10 sm:pt-14 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:items-center lg:gap-12 lg:pb-24 lg:pt-20"
+      className="grid gap-12 pb-20 pt-12 sm:pt-16 lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)] lg:items-center lg:gap-14 lg:pb-28 lg:pt-24"
     >
       <div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <Image
             src={personal.photo}
             alt=""
-            width={44}
-            height={44}
+            width={40}
+            height={40}
             unoptimized
-            priority
-            className="size-11 rounded-full border border-rule object-cover"
+            className="size-10 rounded-full border border-rule object-cover"
           />
           <p className="font-mono text-[12px] text-muted">{personal.headline}</p>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-rule bg-surface px-2.5 py-0.5 font-mono text-[11px] text-muted">
+            <span aria-hidden="true" className="live-dot size-1.5 rounded-full bg-ok" />
+            Open to SWE roles
+          </span>
         </div>
-        <h1 className="mt-6 text-[2.9rem] font-semibold leading-[0.95] tracking-[-0.035em] sm:text-6xl">
+        <h1 className="mt-7 text-[3.3rem] font-semibold leading-[0.92] tracking-[-0.045em] sm:text-7xl">
           Sree Vardhan{" "}
           <br />
           Reddy
         </h1>
-        <p className="mt-5 max-w-md text-lg leading-relaxed text-muted">{personal.tagline}</p>
-        <p className="mt-4 max-w-md text-[14px] leading-relaxed text-muted">
-          The terminal <span className="lg:hidden">below</span>
-          <span className="hidden lg:inline">beside this</span> is <span className="text-foreground">ForgeDB</span>, the
-          Redis-compatible database I wrote in C++, running in your browser. Try a command.
+        <p className="mt-6 max-w-md text-lg leading-relaxed text-muted sm:text-xl">{personal.tagline}</p>
+        <p className="mt-5 flex max-w-md gap-2.5 text-[14px] leading-relaxed text-muted">
+          <span aria-hidden="true" className="font-mono text-accent">
+            <span className="lg:hidden">↓</span>
+            <span className="hidden lg:inline">→</span>
+          </span>
+          <span>
+            That terminal is <span className="font-medium text-foreground">ForgeDB</span>, the Redis-compatible database I
+            wrote in C++, compiled to WebAssembly and running in your browser. Try a command.
+          </span>
         </p>
-        <div data-testid="hero-actions" className="mt-7 flex flex-wrap items-center gap-2">
+        <div data-testid="hero-actions" className="mt-8 flex flex-wrap items-center gap-2">
           <a href={personal.resume} target="_blank" rel="noreferrer" className={primaryButton}>
             <FileText aria-hidden="true" className="size-4" />
             Resume

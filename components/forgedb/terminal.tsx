@@ -2,22 +2,26 @@
 
 import { type FormEvent, type KeyboardEvent, useEffect, useEffectEvent, useRef, useState } from "react"
 import chips from "@/lib/forgedb/chips.json"
-import type { ForgeStatus } from "@/lib/forgedb/session"
+import type { ForgeStatus, RunResult } from "@/lib/forgedb/session"
 import { getForgeSession } from "@/lib/forgedb/shared"
 import { FORGEDB_RUN_EVENT, type ForgeRunDetail } from "@/lib/events"
 import manifest from "@/public/wasm/manifest.json"
 
 const PROMPT = "127.0.0.1:6379>"
 const MAX_LINES = 200
-const STATUS_TEXT: Record<ForgeStatus | "recorded", string> = {
-  recorded: "recorded session",
-  idle: "recorded session",
-  loading: "loading…",
-  ready: "ready",
-  unavailable: "live demo unavailable, showing a recorded session",
+const SHA = manifest.forgedb.sha.slice(0, 7)
+// A short, real session typed out once the live module is ready, unless the visitor gets there first.
+const INTRO = ["PING", 'SET visitor "hello" EX 30', "TTL visitor"]
+const TYPE_MS = 38
+const STATUS_TEXT: Record<ForgeStatus, string> = {
+  idle: "recorded",
+  loading: "connecting…",
+  ready: "live",
+  unavailable: "unavailable · recorded",
 }
 
 type Entry = { id: number; source: "recorded" | "note" | "live"; input?: string; output: string[] | null }
+type IntroState = "pending" | "running" | "done" | "skipped"
 
 let nextId = 0
 const recordedEntries = (): Entry[] =>
@@ -32,33 +36,72 @@ function trimmed(entries: Entry[]): Entry[] {
 }
 
 const isError = (line: string) => line.startsWith("(error)") || line === "Invalid argument(s)"
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 export function ForgeTerminal() {
   const [entries, setEntries] = useState<Entry[]>(recordedEntries)
   const [status, setStatus] = useState<ForgeStatus>("idle")
   const [draft, setDraft] = useState("")
+  const [intro, setIntro] = useState<IntroState>("pending")
+  const [visible, setVisible] = useState(false)
   const history = useRef<string[]>([])
   const historyIndex = useRef(-1)
-  const logRef = useRef<HTMLDivElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
   const rootRef = useRef<HTMLDivElement>(null)
+  const interacted = useRef(false)
+  const introStarted = useRef(false)
+  const unmounted = useRef(false)
 
-  const run = (command: string) => {
-    const session = getForgeSession()
+  const run = (command: string): Promise<RunResult> => {
     const id = nextId++
     setEntries((current) => trimmed([...current, { id, source: "live", input: command, output: null }]))
     if (command.trim()) history.current = [command, ...history.current.filter((c) => c !== command)].slice(0, 50)
     historyIndex.current = -1
-    void session.run(command).then((result) => {
-      setEntries((current) =>
-        result.clear
-          ? []
-          : trimmed(current.map((entry) => (entry.id === id ? { ...entry, output: result.lines } : entry))),
-      )
-    })
+    return getForgeSession()
+      .run(command)
+      .then((result) => {
+        setEntries((current) =>
+          result.clear ? [] : trimmed(current.map((entry) => (entry.id === id ? { ...entry, output: result.lines } : entry))),
+        )
+        return result
+      })
   }
+
+  // Any sign the visitor wants the terminal stops the intro and starts loading the module.
+  const engage = () => {
+    interacted.current = true
+    setIntro((state) => (state === "done" ? state : "skipped"))
+    void getForgeSession().start()
+  }
+
   const runFromMenu = useEffectEvent((command: string) => {
+    engage()
     rootRef.current?.scrollIntoView({ block: "center" })
-    run(command)
+    void run(command)
+  })
+
+  const playIntro = useEffectEvent(async () => {
+    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    const stopped = () => interacted.current || unmounted.current
+    await sleep(reduce ? 0 : 600)
+    if (stopped()) return
+    setIntro("running")
+    for (const command of INTRO) {
+      if (!reduce) {
+        for (let i = 1; i <= command.length; i++) {
+          if (stopped()) return setDraft("")
+          setDraft(command.slice(0, i))
+          await sleep(TYPE_MS)
+        }
+        await sleep(160)
+      }
+      if (stopped()) return setDraft("")
+      setDraft("")
+      await run(command)
+      await sleep(reduce ? 0 : 420)
+    }
+    if (!stopped()) setIntro("done")
   })
 
   // Load the module after the page has loaded and gone idle, unless the visitor reaches the terminal first.
@@ -72,13 +115,8 @@ export function ForgeTerminal() {
             id: nextId++,
             source: "note",
             output: [
-              `Connected to ForgeDB@${manifest.forgedb.sha.slice(0, 7)}, running in this tab.`,
-              "Data lives in memory and resets on reload.",
-              "",
-              "Try these, or tap the chips below:",
-              '  SET visitor "hello" EX 30   then  TTL visitor',
-              "  LPUSH queue a b c           then  LRANGE queue 0 -1",
-              "  HELP                        lists every command",
+              `# ForgeDB@${SHA} · C++17 → WebAssembly`,
+              "# in memory, in this tab · HELP lists commands",
             ],
           },
           ...current.filter((entry) => entry.source === "live"),
@@ -94,12 +132,14 @@ export function ForgeTerminal() {
     if (document.readyState === "complete") schedule()
     else window.addEventListener("load", schedule, { once: true })
 
-    const onRun = (event: Event) => {
-      runFromMenu((event as CustomEvent<ForgeRunDetail>).detail.command)
-    }
+    const onRun = (event: Event) => runFromMenu((event as CustomEvent<ForgeRunDetail>).detail.command)
     window.addEventListener(FORGEDB_RUN_EVENT, onRun)
+    const observer = new IntersectionObserver(([entry]) => setVisible(entry.isIntersecting), { threshold: 0.4 })
+    observer.observe(rootRef.current!)
     return () => {
+      unmounted.current = true
       stopStatus()
+      observer.disconnect()
       window.removeEventListener("load", schedule)
       window.removeEventListener(FORGEDB_RUN_EVENT, onRun)
       if (idleHandle !== undefined) {
@@ -110,13 +150,19 @@ export function ForgeTerminal() {
   }, [])
 
   useEffect(() => {
-    const log = logRef.current
-    if (log) log.scrollTop = log.scrollHeight
-  }, [entries])
+    if (status !== "ready" || !visible || introStarted.current || interacted.current) return
+    introStarted.current = true
+    void playIntro()
+  }, [status, visible])
+
+  useEffect(() => {
+    const scroller = scrollRef.current
+    if (scroller) scroller.scrollTop = scroller.scrollHeight
+  }, [entries, draft])
 
   const onSubmit = (event: FormEvent) => {
     event.preventDefault()
-    run(draft)
+    void run(draft)
     setDraft("")
   }
 
@@ -129,74 +175,103 @@ export function ForgeTerminal() {
     setDraft(next === -1 ? "" : history.current[next])
   }
 
-  const statusTone =
-    status === "ready" ? "bg-ok" : status === "unavailable" ? "bg-err" : status === "loading" ? "bg-accent" : "bg-muted"
+  // Clicking the screen focuses the prompt, unless the visitor is selecting text to copy.
+  const focusPrompt = () => {
+    if (window.getSelection()?.isCollapsed !== false) inputRef.current?.focus({ preventScroll: true })
+  }
+
+  const hasRecorded = entries.some((entry) => entry.source === "recorded")
+  const dot =
+    status === "ready" ? "bg-p-ok" : status === "unavailable" ? "bg-p-err" : status === "loading" ? "bg-p-accent live-dot" : "bg-p-dim"
 
   return (
     <div
       id="forgedb-terminal"
       ref={rootRef}
-      onFocusCapture={() => void getForgeSession().start()}
-      onPointerDownCapture={() => void getForgeSession().start()}
-      className="overflow-hidden rounded-lg border border-rule bg-surface shadow-[0_1px_0_0_var(--rule)]"
+      data-intro={intro}
+      onFocusCapture={engage}
+      onPointerDownCapture={engage}
+      className="panel overflow-hidden"
     >
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-rule px-3.5 py-2 font-mono text-[11px] text-muted">
-        <span className="text-foreground">forgedb · 127.0.0.1:6379</span>
-        <span data-testid="forgedb-status" className="flex items-center gap-1.5">
-          <span aria-hidden="true" className={`inline-block size-1.5 rounded-full ${statusTone}`} />
-          ForgeDB · C++17 compiled to WebAssembly · {STATUS_TEXT[status]}
+      <div className="flex items-center gap-3 border-b border-p-rule bg-p-bg-2 px-4 py-2.5">
+        <span aria-hidden="true" className="panel-dots">
+          <span />
+          <span />
+          <span />
+        </span>
+        <span className="truncate font-mono text-[11.5px] text-p-muted">forgedb — redis-cli · 127.0.0.1:6379</span>
+        <span
+          data-testid="forgedb-status"
+          className="ml-auto flex shrink-0 items-center gap-1.5 rounded-full border border-p-rule bg-p-bg px-2.5 py-0.5 font-mono text-[10.5px] text-p-muted"
+        >
+          <span aria-hidden="true" className={`inline-block size-1.5 rounded-full ${dot}`} />
+          {STATUS_TEXT[status]}
         </span>
       </div>
 
       <div
-        ref={logRef}
-        role="log"
-        aria-label="ForgeDB output"
-        aria-live="polite"
-        tabIndex={0}
-        className="h-64 overflow-y-auto px-3.5 py-3 font-mono text-[12.5px] leading-relaxed whitespace-pre-wrap [overflow-wrap:anywhere] sm:h-72 sm:px-4 sm:text-[13px]"
+        ref={scrollRef}
+        onClick={focusPrompt}
+        className="h-72 overflow-y-auto px-4 py-3.5 font-mono text-[12.5px] leading-[1.7] sm:h-[21rem] sm:px-5 sm:text-[13px]"
       >
-        {entries.map((entry) => (
-          <div key={entry.id} className={entry.source === "recorded" ? "opacity-80" : undefined}>
-            {entry.input !== undefined && (
-              <div>
-                <span className="text-accent">{PROMPT}</span> {entry.input}
-              </div>
-            )}
-            {entry.output?.map((line, index) => (
-              <div key={index} className={isError(line) ? "text-err" : entry.source === "note" ? "text-muted" : undefined}>
-                {line || "\u00a0"}
-              </div>
-            ))}
-          </div>
-        ))}
+        <div role="log" aria-label="ForgeDB output" aria-live="polite" className="whitespace-pre-wrap [overflow-wrap:anywhere]">
+          {hasRecorded && (
+            <div className="text-p-muted">
+              {status === "unavailable"
+                ? "# recorded at build time · the live demo couldn't load"
+                : "# recorded at build time · connecting to live ForgeDB…"}
+            </div>
+          )}
+          {entries.map((entry) => (
+            <div key={entry.id} className={entry.source === "recorded" ? "opacity-70" : undefined}>
+              {entry.input !== undefined && (
+                <div>
+                  <span className="text-p-accent">{PROMPT}</span> <span className="text-p-fg">{entry.input}</span>
+                </div>
+              )}
+              {entry.output?.map((line, index) => (
+                <div
+                  key={index}
+                  className={isError(line) ? "text-p-err" : entry.source === "note" ? "text-p-muted" : "text-p-fg/85"}
+                >
+                  {line || " "}
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+        <form onSubmit={onSubmit} className="flex items-center">
+          <span aria-hidden="true" className="shrink-0 text-p-accent">
+            {PROMPT}&nbsp;
+          </span>
+          <input
+            ref={inputRef}
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            onKeyDown={onKeyDown}
+            aria-label="ForgeDB command"
+            autoComplete="off"
+            autoCapitalize="off"
+            autoCorrect="off"
+            spellCheck={false}
+            placeholder={intro === "running" ? "" : "type a command"}
+            className="min-w-0 flex-1 bg-transparent text-base text-p-fg caret-[var(--p-accent)] placeholder:text-p-dim focus:outline-none sm:text-[13px]"
+          />
+        </form>
       </div>
 
-      <form onSubmit={onSubmit} className="flex items-center gap-2 border-t border-rule px-3.5 py-2.5 font-mono sm:px-4">
-        <span aria-hidden="true" className="shrink-0 text-[13px] text-accent">
-          {PROMPT}
-        </span>
-        <input
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          onKeyDown={onKeyDown}
-          aria-label="ForgeDB command"
-          autoComplete="off"
-          autoCapitalize="off"
-          autoCorrect="off"
-          spellCheck={false}
-          placeholder="type a command, e.g. GET visitor"
-          className="min-w-0 flex-1 bg-transparent text-base text-foreground placeholder:text-muted/70 focus:outline-none sm:text-[13px]"
-        />
-      </form>
-
-      <div role="group" aria-label="Example commands" className="flex flex-wrap gap-1.5 border-t border-rule px-3 py-2.5">
+      <div
+        role="group"
+        aria-label="Example commands"
+        className="flex items-center gap-2 overflow-x-auto border-t border-p-rule bg-p-bg-2 px-4 py-2.5 [mask-image:linear-gradient(to_right,black_88%,transparent)] [scrollbar-width:none]"
+      >
+        <span className="shrink-0 font-mono text-[10px] uppercase tracking-[0.16em] text-p-muted">try</span>
         {chips.map((chip) => (
           <button
             key={chip}
             type="button"
-            onClick={() => run(chip)}
-            className="rounded border border-rule bg-surface-2 px-2 py-1 font-mono text-[11.5px] text-foreground transition-colors hover:border-accent hover:text-accent"
+            onClick={() => void run(chip)}
+            className="shrink-0 rounded-md border border-p-rule bg-p-bg-3 px-2 py-1 font-mono text-[11.5px] text-p-fg/90 transition-colors hover:border-p-accent/70 hover:text-p-accent"
           >
             {chip}
           </button>

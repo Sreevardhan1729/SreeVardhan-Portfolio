@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect, useEffectEvent, useRef, useState } from "react"
+import { Pause, Play } from "lucide-react"
+import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react"
 import { GATEWAY_FAIL_EVENT, type GatewayFailDetail } from "@/lib/events"
 import { loadGatewaySim } from "@/lib/gateway/loader"
 import { withTimeout } from "@/lib/timeout"
@@ -8,7 +9,7 @@ import { rollingShare } from "@/lib/gateway/share"
 import { arrivalsFor, burst, type Mix } from "@/lib/gateway/traffic"
 import type { BackendName, BreakerState, GatewaySim, SimConfig, SimEvent, SimSnapshot } from "@/lib/gateway/types"
 import manifest from "@/public/wasm/manifest.json"
-import { PipelineCanvas } from "./pipeline-canvas"
+import { type FlowMetrics, PipelineCanvas } from "./pipeline-canvas"
 import { StaticPipeline } from "./static-pipeline"
 
 // Demo scale: small enough to overload at a few requests per second. The breaker timings are the gateway's own.
@@ -44,9 +45,16 @@ const EMPTY_VIEW: View = {
 const STATUS_TEXT: Record<Status, string> = {
   idle: "loads when you scroll here",
   loading: "loading…",
-  ready: `running ai-inference-gateway@${manifest.gateway.sha.slice(0, 7)}, compiled with TinyGo`,
-  unavailable: "live simulation unavailable, showing the request path",
+  ready: `live · ai-inference-gateway@${manifest.gateway.sha.slice(0, 7)} · ${manifest.gateway.toolchain.split(" ")[0]}`,
+  unavailable: "unavailable · showing the request path",
 }
+const STATUS_DOT: Record<Status, string> = {
+  idle: "bg-p-dim",
+  loading: "bg-p-accent live-dot",
+  ready: "bg-p-ok live-dot",
+  unavailable: "bg-p-err",
+}
+const BREAKER_DOT: Record<BreakerState, string> = { closed: "bg-p-ok", open: "bg-p-err", "half-open": "bg-p-accent" }
 
 const ANNOUNCE: Record<BreakerState, string> = { open: "opened", "half-open": "half-open", closed: "closed" }
 
@@ -186,52 +194,100 @@ export function GatewaySimulation() {
 
   const ready = status === "ready" && sim !== null
   const anyOpen = BACKENDS.some((backend) => view.backends[backend].state === "open")
-  const states = { A: view.backends.A.state, B: view.backends.B.state }
+  const metrics = useMemo<FlowMetrics>(
+    () => ({
+      rate: playing ? rate : 0,
+      rateLimited: view.rateLimited,
+      queue: view.queue,
+      capacity: CONFIG.QueueCapacity,
+      share: view.share,
+      states: { A: view.backends.A.state, B: view.backends.B.state },
+    }),
+    [playing, rate, view],
+  )
+  const totalShed = view.shed[0] + view.shed[1] + view.shed[2]
 
   return (
-    <div id="gateway-sim" ref={rootRef} data-status={status} className="overflow-hidden rounded-lg border border-rule bg-surface">
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-rule px-3.5 py-2 font-mono text-[11px] text-muted">
-        <span className="text-foreground">gateway · live simulation</span>
-        <span>{STATUS_TEXT[status]}</span>
+    <div id="gateway-sim" ref={rootRef} data-status={status} className="panel overflow-hidden">
+      <div className="flex items-center gap-3 border-b border-p-rule bg-p-bg-2 px-4 py-2.5">
+        <span aria-hidden="true" className="panel-dots">
+          <span />
+          <span />
+          <span />
+        </span>
+        <span className="truncate font-mono text-[11.5px] text-p-muted">gateway — live simulation</span>
+        <span className="ml-auto flex min-w-0 items-center gap-1.5 rounded-full border border-p-rule bg-p-bg px-2.5 py-0.5 font-mono text-[10.5px] text-p-muted">
+          <span aria-hidden="true" className={`inline-block size-1.5 shrink-0 rounded-full ${STATUS_DOT[status]}`} />
+          <span className="truncate">{STATUS_TEXT[status]}</span>
+        </span>
       </div>
 
-      <div className="h-60 border-b border-rule sm:h-48">
-        {ready ? <PipelineCanvas pending={pending} states={states} animate={!reducedMotion} /> : <StaticPipeline />}
+      <div className="h-64 border-b border-p-rule">
+        {ready ? <PipelineCanvas pending={pending} metrics={metrics} animate={!reducedMotion} /> : <StaticPipeline />}
       </div>
 
-      <div className="grid gap-x-6 gap-y-1.5 border-b border-rule px-3.5 py-3 font-mono text-[12px] sm:grid-cols-2">
-        <p data-testid="share">
-          Share (last 10 s): A {view.share.A}% · B {view.share.B}%
-        </p>
-        <p data-testid="served">
-          Served: A {view.backends.A.served} · B {view.backends.B.served}
-        </p>
-        <p className="flex flex-wrap gap-2">
-          {BACKENDS.map((backend) => {
-            const state = view.backends[backend].state
-            const tone = state === "closed" ? "border-ok text-ok" : state === "open" ? "border-err text-err" : "border-accent text-accent"
-            return (
-              <span key={backend} data-testid={`breaker-${backend}`} className={`rounded border px-1.5 ${tone}`}>
+      <div className="grid grid-cols-2 gap-px border-b border-p-rule bg-p-rule lg:grid-cols-4">
+        <div data-testid="share" className="bg-p-bg p-4">
+          <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-p-muted">Share · last 10 s</p>
+          <p className="mt-2 font-mono text-lg leading-none">
+            <span className="text-p-a">A {view.share.A}%</span> <span className="text-p-dim">/</span>{" "}
+            <span className="text-p-b">B {view.share.B}%</span>
+          </p>
+          <div aria-hidden="true" className="mt-2.5 flex h-1.5 overflow-hidden rounded-full bg-p-rule">
+            <span className="bg-p-a transition-[width] duration-300" style={{ width: `${view.share.A}%` }} />
+            <span className="bg-p-b transition-[width] duration-300" style={{ width: `${view.share.B}%` }} />
+          </div>
+          <p data-testid="served" className="mt-2 font-mono text-[10.5px] text-p-muted">
+            Served A {view.backends.A.served} · B {view.backends.B.served}
+          </p>
+        </div>
+
+        <div className="bg-p-bg p-4">
+          <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-p-muted">Circuit breakers</p>
+          <div className="mt-2 space-y-1.5">
+            {BACKENDS.map((backend) => (
+              <p key={backend} data-testid={`breaker-${backend}`} className="flex items-center gap-2 font-mono text-[12px]">
+                <span aria-hidden="true" className={`size-1.5 shrink-0 rounded-full ${BREAKER_DOT[view.backends[backend].state]}`} />
                 {breakerText(backend, view.backends[backend])}
-              </span>
-            )
-          })}
-        </p>
-        <p data-testid="rate-limited">429s: {view.rateLimited}</p>
-        <p>
-          Shed: premium {view.shed[0]} · default {view.shed[1]} · batch {view.shed[2]}
-        </p>
-        <p>
-          Queue: {view.queue} / {CONFIG.QueueCapacity}
-        </p>
+              </p>
+            ))}
+          </div>
+        </div>
+
+        <div data-testid="rate-limited" className="bg-p-bg p-4">
+          <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-p-muted">Rate limited</p>
+          <p className={`mt-2 font-mono text-2xl leading-none ${view.rateLimited > 0 ? "text-p-err" : "text-p-fg"}`}>
+            {view.rateLimited}
+          </p>
+          <p className="mt-1.5 font-mono text-[10.5px] text-p-muted">429 responses</p>
+        </div>
+
+        <div className="bg-p-bg p-4">
+          <p className="font-mono text-[10px] uppercase tracking-[0.14em] text-p-muted">Queue</p>
+          <p className="mt-2 font-mono text-2xl leading-none">
+            {view.queue}
+            <span className="text-sm text-p-muted"> / {CONFIG.QueueCapacity}</span>
+          </p>
+          <div aria-hidden="true" className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-p-rule">
+            <span
+              className="block h-full bg-p-accent transition-[width] duration-200"
+              style={{ width: `${Math.min(100, (view.queue / CONFIG.QueueCapacity) * 100)}%` }}
+            />
+          </div>
+          <p className="mt-2 font-mono text-[10.5px] text-p-muted">shed {totalShed}</p>
+          <p className="font-mono text-[10px] text-p-dim">
+            premium {view.shed[0]} · default {view.shed[1]} · batch {view.shed[2]}
+          </p>
+        </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-3 px-3.5 py-3 text-[13px]">
-        <button type="button" disabled={!ready} onClick={() => setPlaying((value) => !value)} className="control">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2.5 bg-p-bg-2 px-4 py-3">
+        <button type="button" disabled={!ready} onClick={() => setPlaying((value) => !value)} className="pbtn">
+          {playing ? <Pause aria-hidden="true" className="size-3.5" /> : <Play aria-hidden="true" className="size-3.5" />}
           {playing ? "Pause" : "Play"}
         </button>
-        <label className="flex items-center gap-2">
-          <span>Traffic</span>
+        <label className="flex items-center gap-2 text-[12.5px] text-p-muted">
+          Traffic
           <input
             type="range"
             min={1}
@@ -239,10 +295,11 @@ export function GatewaySimulation() {
             value={rate}
             disabled={!ready}
             onChange={(event) => setRate(Number(event.target.value))}
-            className="w-28 accent-[var(--accent)]"
+            className="w-24 accent-[var(--p-accent)]"
           />
-          <output className="w-16 font-mono text-[12px] text-muted">{rate} req/s</output>
+          <output className="w-16 whitespace-nowrap font-mono text-[12px] text-p-fg">{rate} req/s</output>
         </label>
+        <span aria-hidden="true" className="hidden h-5 w-px bg-p-rule sm:block" />
         {BACKENDS.map((backend) => (
           <button
             key={backend}
@@ -251,14 +308,14 @@ export function GatewaySimulation() {
             aria-checked={failing[backend]}
             disabled={!ready}
             onClick={() => setFailing((current) => ({ ...current, [backend]: !current[backend] }))}
-            className="control flex items-center gap-2"
+            className="pbtn"
           >
             <span
               aria-hidden="true"
-              className={`relative inline-block h-3.5 w-6 rounded-full transition-colors ${failing[backend] ? "bg-err" : "bg-rule"}`}
+              className={`relative inline-block h-3.5 w-6 rounded-full transition-colors ${failing[backend] ? "bg-p-err" : "bg-p-rule"}`}
             >
               <span
-                className={`absolute top-0.5 size-2.5 rounded-full bg-surface transition-transform ${failing[backend] ? "translate-x-3" : "translate-x-0.5"}`}
+                className={`absolute top-0.5 size-2.5 rounded-full bg-p-fg transition-transform ${failing[backend] ? "translate-x-3" : "translate-x-0.5"}`}
               />
             </span>
             Backend {backend} failing
@@ -270,33 +327,38 @@ export function GatewaySimulation() {
           onClick={() => {
             for (const arrival of burst()) sim?.submit(arrival.key, arrival.priority, arrival.cost)
           }}
-          className="control"
+          className="pbtn"
         >
           Burst from one API key
         </button>
-        <button type="button" disabled={!ready || !anyOpen} onClick={() => sim?.skipCooldown()} className="control">
+        <button type="button" disabled={!ready || !anyOpen} onClick={() => sim?.skipCooldown()} className="pbtn">
           Skip cooldown
         </button>
-        <fieldset className="flex flex-wrap items-center gap-x-3 gap-y-1" disabled={!ready}>
-          <legend className="float-left mr-2">Traffic mix</legend>
-          {MIXES.map((option) => (
-            <label key={option.value} className="flex items-center gap-1.5">
-              <input
-                type="radio"
-                name="traffic-mix"
-                value={option.value}
-                checked={mix === option.value}
-                onChange={() => setMix(option.value)}
-                className="accent-[var(--accent)]"
-              />
-              {option.label}
-            </label>
-          ))}
+        <fieldset className="flex flex-wrap items-center gap-2" disabled={!ready}>
+          <legend className="float-left mr-1 text-[12.5px] text-p-muted">Traffic mix</legend>
+          <span className="flex rounded-lg border border-p-rule bg-p-bg p-0.5">
+            {MIXES.map((option) => (
+              <label
+                key={option.value}
+                className="cursor-pointer whitespace-nowrap rounded-md px-2 py-1 text-[12px] text-p-muted transition-colors has-[:checked]:bg-p-bg-3 has-[:checked]:text-p-fg has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-p-accent"
+              >
+                <input
+                  type="radio"
+                  name="traffic-mix"
+                  value={option.value}
+                  checked={mix === option.value}
+                  onChange={() => setMix(option.value)}
+                  className="sr-only"
+                />
+                {option.label}
+              </label>
+            ))}
+          </span>
         </fieldset>
       </div>
 
-      <p className="border-t border-rule px-3.5 py-2.5 text-[12px] text-muted">
-        Demo settings: queue {CONFIG.QueueCapacity} jobs, {CONFIG.Workers} workers. The real gateway runs 1,000 and 50.
+      <p className="border-t border-p-rule px-4 py-2.5 text-[11.5px] leading-relaxed text-p-muted">
+        Demo settings: queue {CONFIG.QueueCapacity} jobs, {CONFIG.Workers} workers (the real gateway runs 1,000 and 50).
         Breakers open after 5 failures and half-open after 30 s, on the next 10 s health check.
       </p>
       <p aria-live="polite" className="sr-only">

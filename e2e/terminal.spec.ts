@@ -10,9 +10,12 @@ async function runCommand(page: Page, command: string) {
   await input(page).press("Enter")
 }
 
+// Focusing the prompt counts as using the terminal, so the self-typing intro steps aside.
 async function openReady(page: Page) {
   await page.goto("/")
-  await expect(status(page)).toContainText("ready")
+  await input(page).focus()
+  await expect(status(page)).toContainText("live")
+  await expect(page.locator("#forgedb-terminal")).toHaveAttribute("data-intro", "skipped")
 }
 
 test("PING chip returns PONG", async ({ page }) => {
@@ -56,7 +59,7 @@ test("commands sent before ready run in order", async ({ page }) => {
   // TTL depends on the SET before it: run in order it reports ~30 seconds, reversed it would be -2.
   await page.getByRole("button", { name: 'SET visitor "hello" EX 30', exact: true }).click()
   await page.getByRole("button", { name: "TTL visitor", exact: true }).click()
-  await expect(status(page)).toContainText("ready")
+  await expect(status(page)).toContainText("live")
   const live = output(page).locator("div", { hasText: /^\(integer\) / })
   await expect(live).toHaveText([/\(integer\) (29|30)/])
 })
@@ -102,4 +105,34 @@ test("no wasm before load", async ({ page }) => {
   })
   expect(timing.wasmStarts.length).toBeGreaterThan(0)
   for (const start of timing.wasmStarts) expect(start).toBeGreaterThanOrEqual(timing.loadEventStart)
+})
+
+test("types a short live demo when left alone", async ({ page }) => {
+  await page.goto("/")
+  const terminal = page.locator("#forgedb-terminal")
+  // The demo waits until the terminal is on screen (below the fold on phones).
+  await terminal.scrollIntoViewIfNeeded()
+  await expect(terminal).toHaveAttribute("data-intro", "done", { timeout: 15_000 })
+  await expect(output(page)).toContainText("PONG")
+  await expect(output(page).locator("div", { hasText: /^\(integer\) / })).toHaveText([/\(integer\) (29|30)/])
+  await expect(input(page)).toHaveValue("")
+})
+
+test("clicking the terminal before it is live skips the demo", async ({ page }) => {
+  await page.goto("/")
+  await page.locator("#forgedb-terminal").click()
+  await expect(status(page)).toContainText("live")
+  await expect(page.locator("#forgedb-terminal")).toHaveAttribute("data-intro", "skipped")
+  await page.waitForTimeout(1500)
+  await expect(output(page)).not.toContainText("PONG")
+})
+
+test("the demo runs without typing animation under reduced motion", async ({ browser }) => {
+  const context = await browser.newContext({ reducedMotion: "reduce" })
+  const page = await context.newPage()
+  await page.goto("http://localhost:3100/")
+  await page.locator("#forgedb-terminal").scrollIntoViewIfNeeded()
+  await expect(page.locator("#forgedb-terminal")).toHaveAttribute("data-intro", "done", { timeout: 15_000 })
+  await expect(output(page)).toContainText("PONG")
+  await context.close()
 })
