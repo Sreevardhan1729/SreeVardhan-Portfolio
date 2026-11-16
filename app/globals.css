@@ -4,6 +4,9 @@
    components/lab/lab-window.tsx. */
 @custom-variant story (@media (min-width: 64rem) and (min-height: 37.5rem));
 
+/* Windows, Linux and ChromeOS, marked on <html> by PLATFORM_SCRIPT in lib/platform.ts before the first paint. */
+@custom-variant os-other (&:where([data-os="other"], [data-os="other"] *));
+
 /* Theme tokens. Light is the base; dark applies from the system setting (also without JS)
    or from the toggle via the .dark class that next-themes sets. Use tokens, not dark: variants. */
 :root {

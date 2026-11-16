@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next"
 import { Instrument_Sans, JetBrains_Mono } from "next/font/google"
 import type { ReactNode } from "react"
 import { ThemeProvider } from "@/components/theme-provider"
+import { PLATFORM_SCRIPT } from "@/lib/platform"
 import { portfolioData } from "@/lib/portfolio-data"
 import { siteDescription, siteTitle, siteUrl } from "@/lib/site"
 import "./globals.css"
@@ -39,6 +40,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={`${sans.variable} ${mono.variable}`} suppressHydrationWarning>
       <body>
+        <script dangerouslySetInnerHTML={{ __html: PLATFORM_SCRIPT }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(personJsonLd) }} />
         <ThemeProvider>
           <a href="#content" className="skip-link">

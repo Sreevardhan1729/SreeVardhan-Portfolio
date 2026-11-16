@@ -20,6 +20,28 @@ test("Ctrl+K opens the command menu", async ({ page }) => {
   await expect(dialog(page)).toBeVisible()
 })
 
+for (const { os, platform, label, keys, press } of [
+  { os: "macOS", platform: "MacIntel", label: "⌘K", keys: "Meta+K", press: "Meta+k" },
+  { os: "Windows", platform: "Win32", label: "Ctrl+K", keys: "Control+K", press: "Control+k" },
+]) {
+  test(`on ${os} the menu button shows ${label}, and that shortcut opens it`, async ({ page }, testInfo) => {
+    test.skip(testInfo.project.name === "mobile", "phones show Menu instead of a shortcut")
+    await page.addInitScript(
+      ({ platform, os }) => {
+        Object.defineProperty(navigator, "platform", { get: () => platform, configurable: true })
+        Object.defineProperty(navigator, "userAgentData", { get: () => ({ platform: os }), configurable: true })
+      },
+      { platform, os },
+    )
+    await page.goto("/")
+    await expect(trigger(page)).toHaveText(label, { useInnerText: true })
+    await expect(trigger(page)).toHaveAttribute("aria-keyshortcuts", keys)
+    await expect(page.getByRole("button", { name: /Switch to (light|dark) theme/ })).toBeVisible()
+    await page.keyboard.press(press)
+    await expect(dialog(page)).toBeVisible()
+  })
+}
+
 test("typing a section name jumps to it", async ({ page }) => {
   await page.goto("/")
   await chooseAction(page, "contact")
