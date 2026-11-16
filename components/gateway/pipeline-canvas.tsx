@@ -25,6 +25,7 @@ type Palette = Record<"fg" | "muted" | "dim" | "rule" | "bg2" | "bg3" | "accent"
 const MAX_DOTS = 70
 const SEGMENT_MS = 300
 const FADE_MS = 260
+const LIMITER_FLASH_MS = 900
 const STAGES = ["client", "limiter", "queue", "balancer"] as const
 const STAGE_X = [0.0, 0.25, 0.5, 0.75]
 const BACKEND_Y: Record<BackendName, number> = { A: 0.3, B: 0.7 }
@@ -65,6 +66,8 @@ export function PipelineCanvas({ pending, metrics, animate }: Props) {
     const ctx = canvas.getContext("2d")!
     let palette = readPalette(wrap)
     const dots: Dot[] = []
+    let lastLimited = metricsRef.current.rateLimited
+    let limiterFlashAt = Number.NEGATIVE_INFINITY
     let width = 0
     let height = 0
     let frame = 0
@@ -101,15 +104,19 @@ export function PipelineCanvas({ pending, metrics, animate }: Props) {
       }
     }
 
-    const card = (cx: number, cy: number, geo: ReturnType<typeof layout>, label: string, detail: string, stroke: string, detailColor = palette.muted) => {
+    // `glow` (0 to 1) lights the border, for a stage that just turned requests away.
+    const card = (cx: number, cy: number, geo: ReturnType<typeof layout>, label: string, detail: string, stroke: string, detailColor = palette.muted, glow = 0) => {
       const { nodeW, nodeH, narrow } = geo
       ctx.fillStyle = palette.bg3
       ctx.strokeStyle = stroke
-      ctx.lineWidth = 1
+      ctx.lineWidth = 1 + glow
       ctx.beginPath()
       ctx.roundRect(cx - nodeW / 2, cy - nodeH / 2, nodeW, nodeH, 8)
       ctx.fill()
+      ctx.shadowColor = stroke
+      ctx.shadowBlur = 14 * glow
       ctx.stroke()
+      ctx.shadowBlur = 0
       ctx.textAlign = "center"
       ctx.textBaseline = "middle"
       ctx.fillStyle = palette.fg
@@ -188,9 +195,23 @@ export function PipelineCanvas({ pending, metrics, animate }: Props) {
         ctx.globalAlpha = 1
       }
 
+      // The limiter flashes whenever its 429 count climbs, so a burst shows where it was stopped.
+      if (m.rateLimited > lastLimited) limiterFlashAt = now
+      lastLimited = m.rateLimited
+      const limiterGlow = Math.max(0, 1 - (now - limiterFlashAt) / LIMITER_FLASH_MS)
+
       const y = height / 2
       card(geo.stageX[0], y, geo, "client", `${m.rate} req/s`, palette.rule)
-      card(geo.stageX[1], y, geo, "limiter", `429s ${m.rateLimited}`, palette.rule, m.rateLimited > 0 ? palette.err : palette.muted)
+      card(
+        geo.stageX[1],
+        y,
+        geo,
+        "limiter",
+        `429s ${m.rateLimited}`,
+        limiterGlow > 0 ? palette.err : palette.rule,
+        m.rateLimited > 0 ? palette.err : palette.muted,
+        limiterGlow,
+      )
       card(geo.stageX[2], y, geo, "queue", `${m.queue}/${m.capacity}`, palette.rule, m.queue >= m.capacity * 0.8 ? palette.warn : palette.muted)
       // Queue depth bar along the bottom of the queue card.
       const barW = geo.nodeW - 16

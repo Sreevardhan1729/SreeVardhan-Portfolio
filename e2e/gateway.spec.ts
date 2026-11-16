@@ -84,6 +84,7 @@ test("burst produces 429s", async ({ page }) => {
   await expect
     .poll(async () => Number(/(\d+)/.exec(await page.getByTestId("rate-limited").innerText())?.[1]), { timeout: 3_000 })
     .toBeGreaterThan(0)
+  await expect(page.getByTestId("burst-delta")).toHaveText(/^\+\d+$/)
 })
 
 test("blocked wasm shows the static pipeline", async ({ page }) => {

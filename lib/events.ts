@@ -2,6 +2,7 @@
 export const FORGEDB_RUN_EVENT = "forgedb:run" // detail: { command: string }
 export const GATEWAY_FAIL_EVENT = "gateway:fail" // detail: { backend: "A" | "B" }
 export const GATEWAY_BURST_EVENT = "gateway:burst"
+export const GATEWAY_BURST_RESULT_EVENT = "gateway:burst-result" // detail: BurstResult
 export const LAB_SHOW_EVENT = "lab:show" // detail: { tab: LabTab }
 
 // The tabs of the live-demo window in the hero.
@@ -10,6 +11,8 @@ export type LabTab = "forgedb" | "gateway"
 export type ForgeRunDetail = { command: string }
 export type GatewayFailDetail = { backend: "A" | "B" }
 export type LabShowDetail = { tab: LabTab }
+// What the gateway did with one burst: the requests it admitted, turned away with a 429, or shed from a full queue.
+export type BurstResult = { sent: number; accepted: number; limited: number; shed: number }
 
 export function runInForgeDB(command: string): void {
   window.dispatchEvent(new CustomEvent<ForgeRunDetail>(FORGEDB_RUN_EVENT, { detail: { command } }))
@@ -21,6 +24,10 @@ export function failBackend(backend: "A" | "B"): void {
 
 export function burstOneKey(): void {
   window.dispatchEvent(new Event(GATEWAY_BURST_EVENT))
+}
+
+export function reportBurst(result: BurstResult): void {
+  window.dispatchEvent(new CustomEvent<BurstResult>(GATEWAY_BURST_RESULT_EVENT, { detail: result }))
 }
 
 export function showDemo(tab: LabTab): void {

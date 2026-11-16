@@ -1,9 +1,10 @@
 "use client"
 
 import { Pause, Play } from "lucide-react"
+import dynamic from "next/dynamic"
 import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react"
 import { CONFIG } from "@/lib/gateway/config"
-import { GATEWAY_BURST_EVENT, GATEWAY_FAIL_EVENT, type GatewayFailDetail } from "@/lib/events"
+import { type BurstResult, GATEWAY_BURST_EVENT, GATEWAY_FAIL_EVENT, type GatewayFailDetail, reportBurst } from "@/lib/events"
 import { failingStore, useFailing } from "@/lib/gateway/failing"
 import { loadGatewaySim } from "@/lib/gateway/loader"
 import { withTimeout } from "@/lib/timeout"
@@ -11,8 +12,15 @@ import { rollingShare } from "@/lib/gateway/share"
 import { arrivalsFor, burst, type Mix } from "@/lib/gateway/traffic"
 import type { BackendName, BreakerState, GatewaySim, SimEvent, SimSnapshot } from "@/lib/gateway/types"
 import manifest from "@/public/wasm/manifest.json"
-import { type FlowMetrics, PipelineCanvas } from "./pipeline-canvas"
+import type { FlowMetrics } from "./pipeline-canvas"
 import { StaticPipeline } from "./static-pipeline"
+
+// The animated canvas is drawn only once the module is running, so its code loads alongside the module, not with the page.
+const loadCanvas = () => import("./pipeline-canvas")
+const PipelineCanvas = dynamic(() => loadCanvas().then((module) => module.PipelineCanvas), {
+  ssr: false,
+  loading: () => <StaticPipeline />,
+})
 
 const SHARE_WINDOW_MS = 10_000
 const SNAPSHOT_EVERY_MS = 100
@@ -96,6 +104,8 @@ export function GatewaySimulation({ active, wake }: { active: boolean; wake: boo
   const failing = useFailing()
   const [view, setView] = useState<View>(EMPTY_VIEW)
   const [announcement, setAnnouncement] = useState("")
+  const [lastBurst, setLastBurst] = useState<{ id: number; limited: number; fromWindow: boolean } | null>(null)
+  const burstCount = useRef(0)
   const reducedMotion = usePrefersReducedMotion()
   const currentSettings = useEffectEvent(() => ({ playing, rate, mix }))
 
@@ -111,7 +121,10 @@ export function GatewaySimulation({ active, wake }: { active: boolean; wake: boo
     startedRef.current = true
     setStatus("loading")
     windowLoaded()
-      .then(() => withTimeout(loadGatewaySim(), LOAD_TIMEOUT_MS, "gateway simulation took too long to load"))
+      .then(() => {
+        void loadCanvas()
+        return withTimeout(loadGatewaySim(), LOAD_TIMEOUT_MS, "gateway simulation took too long to load")
+      })
       .then((loaded) => {
         loaded.start(CONFIG)
         setSim(loaded)
@@ -127,10 +140,29 @@ export function GatewaySimulation({ active, wake }: { active: boolean; wake: boo
     for (const backend of BACKENDS) sim.setHealthy(backend, !failing[backend])
   }, [failing, sim])
 
-  const sendBurst = () => {
-    for (const arrival of burst()) sim?.submit(arrival.key, arrival.priority, arrival.cost)
+  // A burst is over in one call, so its outcome is shown where it lands: a "+N" by the 429 count, a ring on the
+  // window's button when that was the one pressed, and a report for the hero's gateway step.
+  useEffect(() => {
+    if (!lastBurst) return
+    const timer = window.setTimeout(() => setLastBurst(null), 2400)
+    return () => window.clearTimeout(timer)
+  }, [lastBurst])
+
+  const sendBurst = (fromWindow: boolean) => {
+    if (!sim) return
+    const result: BurstResult = { sent: 0, accepted: 0, limited: 0, shed: 0 }
+    for (const arrival of burst()) {
+      const outcome = sim.submit(arrival.key, arrival.priority, arrival.cost)
+      result.sent++
+      if (outcome === "accepted") result.accepted++
+      else if (outcome === "rate_limited") result.limited++
+      else result.shed++
+    }
+    burstCount.current++
+    setLastBurst({ id: burstCount.current, limited: result.limited, fromWindow })
+    reportBurst(result)
   }
-  const onBurst = useEffectEvent(sendBurst)
+  const onBurst = useEffectEvent(() => sendBurst(false))
 
   useEffect(() => {
     const onFail = (event: Event) => {
@@ -262,10 +294,16 @@ export function GatewaySimulation({ active, wake }: { active: boolean; wake: boo
           </div>
         </div>
 
-        <div data-testid="rate-limited" className="bg-p-bg px-3.5 py-3">
+        <div data-testid="rate-limited" className="relative bg-p-bg px-3.5 py-3">
+          {lastBurst && <span key={lastBurst.id} aria-hidden="true" className="stat-flash pointer-events-none absolute inset-0" />}
           <p className={label}>Rate limited</p>
           <p className={`mt-1.5 font-mono text-xl leading-none ${view.rateLimited > 0 ? "text-p-err" : "text-p-fg"}`}>
             {view.rateLimited}
+            {lastBurst && (
+              <span key={lastBurst.id} data-testid="burst-delta" className="burst-delta ml-2 inline-block text-[12px]">
+                +{lastBurst.limited}
+              </span>
+            )}
           </p>
           <p className="mt-1.5 font-mono text-[10px] text-p-muted">429 responses</p>
         </div>
@@ -360,9 +398,10 @@ export function GatewaySimulation({ active, wake }: { active: boolean; wake: boo
           <button
             type="button"
             disabled={!ready}
-            onClick={sendBurst}
-            className="pbtn"
+            onClick={() => sendBurst(true)}
+            className="pbtn relative"
           >
+            {lastBurst?.fromWindow && <span key={lastBurst.id} aria-hidden="true" className="burst-ring" />}
             Burst one key
           </button>
           <button type="button" disabled={!ready || !anyOpen} onClick={() => sim?.skipCooldown()} className="pbtn">

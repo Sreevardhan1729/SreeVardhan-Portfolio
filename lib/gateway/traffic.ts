@@ -31,6 +31,8 @@ export function arrivalsFor(dtMs: number, ratePerSec: number, mix: Mix, rng: () 
 }
 
 // Twenty requests at 100 tokens each from one key: the gateway's 1,000-token bucket runs dry halfway through.
+export const BURST_SIZE = 20
+
 export function burst(): Arrival[] {
-  return Array.from({ length: 20 }, () => ({ key: "burst-key", priority: 1, cost: 100 }))
+  return Array.from({ length: BURST_SIZE }, () => ({ key: "burst-key", priority: 1, cost: 100 }))
 }

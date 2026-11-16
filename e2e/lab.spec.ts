@@ -64,6 +64,18 @@ test.describe("wide screens: one pinned window that follows the story", () => {
     await expect(step(page, "gateway").getByRole("button", { name: "Fail backend A" })).toBeVisible()
   })
 
+  test("a burst from the gateway step says what the limiter did with it", async ({ page }) => {
+    await page.goto("/")
+    await scrollToStep(page, "gateway")
+    await expect(sim(page)).toHaveAttribute("data-status", "ready", { timeout: 15_000 })
+    const result = step(page, "gateway").getByTestId("burst-result")
+    await expect(result).toHaveText("Each burst sends 20 requests from one API key.")
+    await step(page, "gateway").getByRole("button", { name: "Burst one key" }).click()
+    await expect(result).toHaveText(/^Last burst: 20 sent · \d+ rate-limited \(429\) · \d+ through$/)
+    await expect(result).toHaveAttribute("role", "status")
+    await expect(page.getByTestId("burst-delta")).toHaveText(/^\+\d+$/)
+  })
+
   test("opening the Gateway tab runs the live simulation in place", async ({ page }) => {
     await page.goto("/")
     await tab(page, "Gateway").click()
