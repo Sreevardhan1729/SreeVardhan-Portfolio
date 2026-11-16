@@ -1,6 +1,6 @@
 # Portfolio Lab
 
-The portfolio of Sree Vardhan Reddy, a software engineer who builds React and TypeScript product features and the Go and Python data systems behind them.
+The portfolio of Sree Vardhan Reddy, a software engineer who builds product features end to end, from React and TypeScript frontends to Go and Python backend services.
 
 Instead of screenshots, the page runs my own systems in the browser:
 

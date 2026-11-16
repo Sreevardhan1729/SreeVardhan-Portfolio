@@ -6,7 +6,7 @@ export type ExternalLink = {
   href: string
 }
 
-// Dates are YYYY-MM or YYYY-MM-DD. DevRev periods come from the dates of the merged PRs behind each highlight.
+// Dates are YYYY-MM or YYYY-MM-DD. DevRev periods are when each piece of work ran.
 export type Period = { start: string; end: string }
 
 export type Experience = {
@@ -65,7 +65,7 @@ export const portfolioData = {
     name: "Sree Vardhan Reddy",
     headline: "Software Engineer, previously at DevRev",
     tagline:
-      "I build product features in React and TypeScript, and the Go and Python data systems behind them.",
+      "I build product features end to end: React and TypeScript on the frontend, Go and Python services on the backend.",
     email: "itssreevardhan@gmail.com",
     photo: "/images/sree-vardhan-reddy.jpg",
     resume:
@@ -115,7 +115,7 @@ export const portfolioData = {
         {
           title: "Real-time export progress.",
           text: "Shipped live progress for SQL data exports across 6 repositories: a new server-streaming gRPC API, progress events relayed through Temporal, and a progress bar in the desktop app.",
-          period: { start: "2026-10-27", end: "2026-11-12" },
+          period: { start: "2026-10-27", end: "2026-11" },
         },
         {
           title: "Data freshness.",
@@ -125,12 +125,12 @@ export const portfolioData = {
         {
           title: "Multi-tab dashboards.",
           text: "Shipped multi-tab dashboards in React across 20 PRs (add, rename, delete, drag-to-reorder and per-tab URL filters) and rolled them out in 5 feature-flag stages, from dev to production GA.",
-          period: { start: "2026-09", end: "2026-11" },
+          period: { start: "2026-08", end: "2026-10" },
         },
         {
           title: "Multi-hop joins.",
           text: "Built multi-hop relationship joins for dashboard widgets, unifying foreign-key and custom-link joins into one hop-based contract, with the SQL generation contributed to open-source Meerkat.",
-          period: { start: "2026-05", end: "2026-09" },
+          period: { start: "2026-05", end: "2026-07" },
         },
         {
           title: "Build-time tracing.",
@@ -296,6 +296,16 @@ export const portfolioData = {
 
   projects: [
     {
+      name: "Smart AI Job Matcher",
+      description:
+        "Extracts skills from a resume with a custom NLP model, ranks job descriptions by fit and lists the skills each applicant is missing.",
+      tags: ["Python", "NLP", "Flask", "React"],
+      links: [
+        { label: "Live", href: "https://ai-job-fit.vercel.app/" },
+        { label: "Source", href: "https://github.com/Sreevardhan1729/AIJobFit" },
+      ],
+    },
+    {
       name: "Online Judge & AI Debugger",
       description:
         "A coding platform with a Docker-sandboxed executor (CPU and memory limits, five verdict types), a Django REST API for problems and submissions, and an error-diagnostics module that enriches stack traces.",
@@ -311,16 +321,6 @@ export const portfolioData = {
         "A ReAct agent built with LangChain that answers questions over PDFs, websites and raw text through a RAG pipeline, deployed to EC2 by GitHub Actions.",
       tags: ["Python", "LangChain", "Flask", "Docker"],
       links: [{ label: "Source", href: "https://github.com/Sreevardhan1729/RAG-Agent" }],
-    },
-    {
-      name: "Smart AI Job Matcher",
-      description:
-        "Extracts skills from a resume with a custom NLP model, ranks job descriptions by fit and lists the skills each applicant is missing.",
-      tags: ["Python", "NLP", "Flask", "React"],
-      links: [
-        { label: "Live", href: "https://ai-job-fit.vercel.app/" },
-        { label: "Source", href: "https://github.com/Sreevardhan1729/AIJobFit" },
-      ],
     },
     {
       name: "Underwater Fish Disease Detection",
@@ -341,6 +341,10 @@ export const portfolioData = {
       description: "A real-time location-sharing Android app for families, with Google sign-in and Firebase.",
       tags: ["Kotlin", "Firebase", "Google Maps"],
       links: [
+        {
+          label: "Demo",
+          href: "https://www.linkedin.com/posts/sreevardhanreddy_everyone-familytracking-innovation-ugcPost-7147134248259432448-ldM-/",
+        },
         {
           label: "Source",
           href: "https://github.com/Sreevardhan1729/GuardianPulse-Family-Location-Insights",
