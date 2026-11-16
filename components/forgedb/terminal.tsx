@@ -111,7 +111,8 @@ export function ForgeTerminal({ active }: { active: boolean }) {
   const autoFocus = useEffectEvent((onScreen: boolean) => {
     if (autoFocusTried.current) return
     autoFocusTried.current = true
-    if (!onScreen || !active || interacted.current || !keysAreFree()) return
+    // Only an unfocused page: a focused tab or chip in the window is the visitor's choice and stays put.
+    if (!onScreen || !active || interacted.current || document.activeElement !== document.body) return
     if (!window.matchMedia("(hover: hover) and (pointer: fine)").matches) return
     autoFocusing.current = true
     inputRef.current?.focus({ preventScroll: true })
