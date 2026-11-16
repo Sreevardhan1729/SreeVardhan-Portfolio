@@ -63,7 +63,7 @@ export function PipelineCanvas({ pending, metrics, animate }: Props) {
     const wrap = wrapRef.current!
     const canvas = canvasRef.current!
     const ctx = canvas.getContext("2d")!
-    const palette = readPalette(wrap)
+    let palette = readPalette(wrap)
     const dots: Dot[] = []
     let width = 0
     let height = 0
@@ -225,6 +225,16 @@ export function PipelineCanvas({ pending, metrics, animate }: Props) {
     observer.observe(wrap)
     resize()
 
+    // The panel colours follow the page theme: the toggle sets a class on <html>, the system setting flips a query.
+    const repaint = () => {
+      palette = readPalette(wrap)
+      draw(performance.now())
+    }
+    const themeClass = new MutationObserver(repaint)
+    themeClass.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] })
+    const systemScheme = window.matchMedia("(prefers-color-scheme: dark)")
+    systemScheme.addEventListener("change", repaint)
+
     if (animate) {
       const tick = (now: number) => {
         draw(now)
@@ -234,6 +244,8 @@ export function PipelineCanvas({ pending, metrics, animate }: Props) {
     }
     return () => {
       observer.disconnect()
+      themeClass.disconnect()
+      systemScheme.removeEventListener("change", repaint)
       cancelAnimationFrame(frame)
     }
   }, [animate, pending])

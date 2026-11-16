@@ -61,7 +61,7 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-ok: var(--ok);
   --color-err: var(--err);
-  /* Demo panels: always dark, whatever the page theme. */
+  /* Demo panels: their own tokens, set per theme on .panel. */
   --color-p-bg: var(--p-bg);
   --color-p-bg-2: var(--p-bg-2);
   --color-p-bg-3: var(--p-bg-3);
@@ -147,8 +147,51 @@ html {
   }
 }
 
-/* Dark product-style panels for the live demos and the trace, on both page themes. */
+/* Product-style panels for the live demos and the trace. They follow the page theme: light here, dark below. */
 .panel {
+  --p-bg: #ffffff;
+  --p-bg-2: #f7f6f2;
+  --p-bg-3: #f5f4ef;
+  --p-fg: #171714;
+  --p-muted: #5c5b54;
+  --p-dim: #706e66;
+  --p-rule: #e4e1d9;
+  --p-accent: #047857;
+  --p-warn: #b45309; /* half-open breakers, a filling queue, a module still loading */
+  --p-ok: #1f7a45;
+  --p-err: #b42318;
+  --p-a: #1d64c8;
+  --p-b: #6d45c9;
+  --p-shadow: 0 1px 2px rgb(23 23 20 / 0.05), 0 24px 48px -28px rgb(23 23 20 / 0.22);
+  color-scheme: light;
+  background: var(--p-bg);
+  color: var(--p-fg);
+  border: 1px solid var(--p-rule);
+  border-radius: 0.875rem;
+  box-shadow: var(--p-shadow);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not(.light) .panel {
+    --p-bg: #0f110e;
+    --p-bg-2: #141712;
+    --p-bg-3: #1b1f18;
+    --p-fg: #ecebe5;
+    --p-muted: #9a988f;
+    --p-dim: #5d5c56;
+    --p-rule: #262a23;
+    --p-accent: #52e3a4;
+    --p-warn: #ffb02e;
+    --p-ok: #5fd08a;
+    --p-err: #ff6b5e;
+    --p-a: #6cb8ff;
+    --p-b: #b69cff;
+    --p-shadow: 0 0 0 1px rgb(0 0 0 / 0.04), 0 1px 0 0 rgb(255 255 255 / 0.04) inset, 0 24px 48px -24px rgb(0 0 0 / 0.45);
+    color-scheme: dark;
+  }
+}
+
+:root.dark .panel {
   --p-bg: #0f110e;
   --p-bg-2: #141712;
   --p-bg-3: #1b1f18;
@@ -157,20 +200,13 @@ html {
   --p-dim: #5d5c56;
   --p-rule: #262a23;
   --p-accent: #52e3a4;
-  --p-warn: #ffb02e; /* half-open breakers, a filling queue, a module still loading */
+  --p-warn: #ffb02e;
   --p-ok: #5fd08a;
   --p-err: #ff6b5e;
   --p-a: #6cb8ff;
   --p-b: #b69cff;
+  --p-shadow: 0 0 0 1px rgb(0 0 0 / 0.04), 0 1px 0 0 rgb(255 255 255 / 0.04) inset, 0 24px 48px -24px rgb(0 0 0 / 0.45);
   color-scheme: dark;
-  background: var(--p-bg);
-  color: var(--p-fg);
-  border: 1px solid var(--p-rule);
-  border-radius: 0.875rem;
-  box-shadow:
-    0 0 0 1px rgb(0 0 0 / 0.04),
-    0 1px 0 0 rgb(255 255 255 / 0.04) inset,
-    0 24px 48px -24px rgb(0 0 0 / 0.45);
 }
 
 /* Window title bar dots. */

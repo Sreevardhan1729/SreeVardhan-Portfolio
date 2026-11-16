@@ -346,10 +346,10 @@ export function GatewaySimulation({ active, wake }: { active: boolean; wake: boo
             >
               <span
                 aria-hidden="true"
-                className={`relative inline-block h-3.5 w-6 rounded-full transition-colors ${failing[backend] ? "bg-p-err" : "bg-p-rule"}`}
+                className={`relative inline-block h-3.5 w-6 rounded-full transition-colors ${failing[backend] ? "bg-p-err" : "bg-p-dim/50"}`}
               >
                 <span
-                  className={`absolute top-0.5 left-0.5 size-2.5 rounded-full bg-p-fg transition-transform ${failing[backend] ? "translate-x-2.5" : "translate-x-0"}`}
+                  className={`absolute top-0.5 left-0.5 size-2.5 rounded-full bg-white shadow-sm transition-transform ${failing[backend] ? "translate-x-2.5" : "translate-x-0"}`}
                 />
               </span>
               <span className="sr-only">Backend </span>
