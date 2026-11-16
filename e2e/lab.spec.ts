@@ -36,15 +36,32 @@ test.describe("wide screens: one pinned window that follows the story", () => {
     await expect(page.getByLabel("ForgeDB command")).toBeVisible()
   })
 
-  test("the gateway step's buttons break the live gateway", async ({ page }) => {
+  test("the gateway step's buttons break the live gateway, and the fail button turns into recover", async ({ page }) => {
     await page.goto("/")
     await scrollToStep(page, "gateway")
     await expect(sim(page)).toHaveAttribute("data-status", "ready", { timeout: 15_000 })
-    await step(page, "gateway").getByRole("button", { name: "Fail backend A" }).click()
+    const gatewayStep = step(page, "gateway")
+    await gatewayStep.getByRole("button", { name: "Fail backend A" }).click()
     await expect(page.getByRole("switch", { name: "Backend A failing" })).toHaveAttribute("aria-checked", "true")
+    await expect(gatewayStep.getByRole("button", { name: "Fail backend A" })).toHaveCount(0)
+    await expect(gatewayStep.getByRole("status").filter({ hasText: "Backend A is" })).toHaveText("Backend A is failing.")
     await expect(page.getByTestId("breaker-A")).toContainText("open", { timeout: 8_000 })
-    await step(page, "gateway").getByRole("button", { name: "Burst one key" }).click()
+    await gatewayStep.getByRole("button", { name: "Burst one key" }).click()
     await expect.poll(() => rateLimited(page), { timeout: 3_000 }).toBeGreaterThan(0)
+    await gatewayStep.getByRole("button", { name: "Recover backend A" }).click()
+    await expect(page.getByRole("switch", { name: "Backend A failing" })).toHaveAttribute("aria-checked", "false")
+    await expect(gatewayStep.getByRole("button", { name: "Fail backend A" })).toBeVisible()
+    await expect(gatewayStep.getByRole("status").filter({ hasText: "Backend A is" })).toHaveText("Backend A is healthy.")
+  })
+
+  test("the gateway step's button follows the window's failing switch", async ({ page }) => {
+    await page.goto("/")
+    await scrollToStep(page, "gateway")
+    await expect(sim(page)).toHaveAttribute("data-status", "ready", { timeout: 15_000 })
+    await page.getByRole("switch", { name: "Backend A failing" }).click()
+    await expect(step(page, "gateway").getByRole("button", { name: "Recover backend A" })).toBeVisible()
+    await page.getByRole("switch", { name: "Backend A failing" }).click()
+    await expect(step(page, "gateway").getByRole("button", { name: "Fail backend A" })).toBeVisible()
   })
 
   test("opening the Gateway tab runs the live simulation in place", async ({ page }) => {

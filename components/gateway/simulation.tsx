@@ -4,6 +4,7 @@ import { Pause, Play } from "lucide-react"
 import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react"
 import { CONFIG } from "@/lib/gateway/config"
 import { GATEWAY_BURST_EVENT, GATEWAY_FAIL_EVENT, type GatewayFailDetail } from "@/lib/events"
+import { failingStore, useFailing } from "@/lib/gateway/failing"
 import { loadGatewaySim } from "@/lib/gateway/loader"
 import { withTimeout } from "@/lib/timeout"
 import { rollingShare } from "@/lib/gateway/share"
@@ -92,7 +93,7 @@ export function GatewaySimulation({ active, wake }: { active: boolean; wake: boo
   const [playing, setPlaying] = useState(true)
   const [rate, setRate] = useState(10)
   const [mix, setMix] = useState<Mix>("default")
-  const [failing, setFailing] = useState<Record<BackendName, boolean>>({ A: false, B: false })
+  const failing = useFailing()
   const [view, setView] = useState<View>(EMPTY_VIEW)
   const [announcement, setAnnouncement] = useState("")
   const reducedMotion = usePrefersReducedMotion()
@@ -135,7 +136,7 @@ export function GatewaySimulation({ active, wake }: { active: boolean; wake: boo
     const onFail = (event: Event) => {
       const { backend } = (event as CustomEvent<GatewayFailDetail>).detail
       setPlaying(true)
-      setFailing((current) => ({ ...current, [backend]: true }))
+      failingStore.set(backend, true)
     }
     const onBurstEvent = () => onBurst()
     window.addEventListener(GATEWAY_FAIL_EVENT, onFail)
@@ -341,7 +342,7 @@ export function GatewaySimulation({ active, wake }: { active: boolean; wake: boo
               role="switch"
               aria-checked={failing[backend]}
               disabled={!ready}
-              onClick={() => setFailing((current) => ({ ...current, [backend]: !current[backend] }))}
+              onClick={() => failingStore.set(backend, !failing[backend])}
               className="pbtn"
             >
               <span
